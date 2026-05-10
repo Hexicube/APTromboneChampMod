@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net472</TargetFramework>
     <AssemblyName>APTromboneChampMod</AssemblyName>
     <Product>AP Trombone</Product>
     <Version>0.0.1</Version>
@@ -19,6 +19,7 @@
     <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.*" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
+    <PackageReference Include="TromboneChamp.BaboonAPI" Version="2.10.5" />
     <PackageReference Include="UnityEngine.Modules" Version="2019.4.41" IncludeAssets="compile" />
   </ItemGroup>
   
