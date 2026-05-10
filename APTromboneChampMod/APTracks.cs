@@ -13,6 +13,7 @@ public struct Track {
     public Track(long ID, string Name, int Difficulty, bool Unsafe = false, string DLC = "Base") {
         this.ID = ID;
         this.Name = Name;
+        this.Difficulty = Difficulty;
         this.Unsafe = Unsafe;
         this.DLC = DLC;
     }
