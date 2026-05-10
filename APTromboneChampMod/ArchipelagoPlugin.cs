@@ -1,4 +1,5 @@
-﻿using BaboonAPI.Hooks;
+﻿using System.Linq;
+using BaboonAPI.Hooks;
 using BaboonAPI.Hooks.Initializer;
 using BaboonAPI.Hooks.Tracks;
 using BepInEx;
@@ -15,9 +16,9 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     public static APSettings WorldSettings = new();
     public static Track[] FilteredTracks = [];
     
-    private void Awake()
-    {
+    private void Awake() {
         Instance = this;
+        FilteredTracks = APTracks.GetTrackList(WorldSettings).ToArray();
         
         Logger = base.Logger;
         Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_NAME} is running at version {MyPluginInfo.PLUGIN_VERSION}");

@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace APTromboneChampMod;
 
 public struct APSettings {
@@ -7,21 +9,23 @@ public struct APSettings {
         PROG = 2
     }
     
-    public int GoalTracks;
-    public Track? GoalTrack;
-    public int GoalRating;
-    public int InitialRating;
-    public int EasyTrackGap;
-    public int HotDogs;
-    public int ExtraHotDogs;
-    public bool TrackGating;
-    public DiffGateType DifficultyGating;
+    public int GoalTracks = 1;
+    public Track? GoalTrack = null;
+    public int GoalRating = 3;
+    public int InitialRating = 3;
+    public int EasyTrackGap = 0;
+    public int HotDogs = 0;
+    public int ExtraHotDogs = 0;
+    public bool TrackGating = false;
+    public DiffGateType DifficultyGating = DiffGateType.OFF;
 
-    public int MinDiff;
-    public int MaxDiff;
-    public bool Unsafe;
-    public bool Celeste;
-    public bool PizzaTower;
-    public bool UndertaleDeltarune;
-    public Track[] RemovedTracks;
+    public int MinDiff = 1;
+    public int MaxDiff = 10;
+    public bool Unsafe = true;
+    public bool Celeste = true;
+    public bool PizzaTower = true;
+    public bool UndertaleDeltarune = true;
+    public Track[] RemovedTracks = [];
+
+    public APSettings() {}
 }

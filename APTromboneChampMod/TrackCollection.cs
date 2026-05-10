@@ -12,10 +12,17 @@ namespace APTromboneChampMod;
 
 public class TrackCollection() : BaseTromboneCollection("AP", "Archipelago", "All tracks required for Archipelago") {
     public override IEnumerable<TromboneTrack> BuildTrackList() {
-        ArrayList unseen = new ArrayList(APTracks.TRACKS.Select(track => track.Name).ToArray());
+        ArrayList unseen = new ArrayList(ArchipelagoPlugin.FilteredTracks);
         foreach (TromboneTrack track in TrackLookup.allTracks()) {
-            if (unseen.Contains(track.trackname_short)) {
-                unseen.Remove(track.trackname_short);
+            Track? match = null;
+            foreach (Track trackDef in unseen) {
+                if (trackDef.Name == track.trackname_short) {
+                    match = trackDef;
+                    break;
+                }
+            }
+            if (match != null) {
+                unseen.Remove(match);
                 yield return track;
             }
             // else ArchipelagoPlugin.Logger.LogInfo($"Unknown track: {track.trackname_short}");
