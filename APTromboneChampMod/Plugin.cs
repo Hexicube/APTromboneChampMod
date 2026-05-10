@@ -22,7 +22,7 @@ public class Plugin : BaseUnityPlugin
 
     private void TryInitialize()
     {
-        TrackCollectionRegistrationEvent.EVENT.Register(new TrackCollectionListener());
+        TrackCollectionRegistrationEvent.EVENT.Register(new TrackCollectionListener(this));
         TrackReloader.ReloadAll(null);
     }
 }
