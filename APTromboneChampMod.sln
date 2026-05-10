@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "APTromboneChampMod", "APTromboneChampMod\APTromboneChampMod.csproj", "{7A0F8C52-CA2E-5501-C1BD-0DD09F950FC5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7A0F8C52-CA2E-5501-C1BD-0DD09F950FC5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A0F8C52-CA2E-5501-C1BD-0DD09F950FC5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A0F8C52-CA2E-5501-C1BD-0DD09F950FC5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A0F8C52-CA2E-5501-C1BD-0DD09F950FC5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D2CA9959-9B84-4BCF-BAE0-E55CD2BDAB64}
+	EndGlobalSection
+EndGlobal
