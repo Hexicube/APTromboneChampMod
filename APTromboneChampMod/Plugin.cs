@@ -1,4 +1,6 @@
-﻿using BaboonAPI.Hooks.Initializer;
+﻿using BaboonAPI.Hooks;
+using BaboonAPI.Hooks.Initializer;
+using BaboonAPI.Hooks.Tracks;
 using BepInEx;
 using BepInEx.Logging;
 
@@ -20,7 +22,7 @@ public class Plugin : BaseUnityPlugin
 
     private void TryInitialize()
     {
-        // do harmony patches here
-        Logger.LogInfo("TryInit");
+        TrackCollectionRegistrationEvent.EVENT.Register(new TrackCollectionListener());
+        TrackReloader.ReloadAll(null);
     }
 }
