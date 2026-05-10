@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using BaboonAPI.Hooks.Tracks;
 using BaboonAPI.Hooks.Tracks.Collections;
 using BaboonAPI.Utility;
@@ -11,12 +12,13 @@ namespace APTromboneChampMod;
 
 public class TrackCollection() : BaseTromboneCollection("AP", "Archipelago", "All tracks required for Archipelago") {
     public override IEnumerable<TromboneTrack> BuildTrackList() {
-        ArrayList unseen = new ArrayList(APTracks.TRACKS);
+        ArrayList unseen = new ArrayList(APTracks.TRACKS.Select(track => track.Name).ToArray());
         foreach (TromboneTrack track in TrackLookup.allTracks()) {
             if (unseen.Contains(track.trackname_short)) {
                 unseen.Remove(track.trackname_short);
                 yield return track;
             }
+            // else ArchipelagoPlugin.Logger.LogInfo($"Unknown track: {track.trackname_short}");
         }
         foreach (string missed in unseen) ArchipelagoPlugin.Logger.LogInfo($"Missed track: {missed}"); // TODO: notify player
     }
