@@ -10,7 +10,7 @@ public struct APSettings {
     }
     
     public int GoalTracks = 1;
-    public Track? GoalTrack = null;
+    public string GoalTrack = null;
     public int GoalRating = 3;
     public int InitialRating = 3;
     public int EasyTrackGap = 0;
@@ -25,7 +25,7 @@ public struct APSettings {
     public bool Celeste = true;
     public bool PizzaTower = true;
     public bool UndertaleDeltarune = true;
-    public Track[] RemovedTracks = [];
+    public string[] RemovedTracks = [];
 
     public APSettings() {}
 }

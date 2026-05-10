@@ -15,10 +15,27 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
     public static APSettings WorldSettings = new();
     public static Track[] FilteredTracks = [];
+    public static Track? GoalTrack = null;
+
+    public void OnWorldSettingsChanged() {
+        // called when connecting to an AP session
+        FilteredTracks = APTracks.GetTrackList(WorldSettings).ToArray();
+        GoalTrack = APTracks.GetGoalTrack(WorldSettings, FilteredTracks);
+        OnTrackAvailabilityChanged();
+    }
+
+    public static Track[] AvailableTracks = [];
+
+    public void OnTrackAvailabilityChanged() {
+        // called when receiving items that might change what tracks are playable
+        // TODO: list of items to check against
+        // TODO: list of locations to determine if a track has been completed
+        AvailableTracks = FilteredTracks;
+        TrackReloader.ReloadAll(null);
+    }
     
     private void Awake() {
         Instance = this;
-        FilteredTracks = APTracks.GetTrackList(WorldSettings).ToArray();
         
         Logger = base.Logger;
         Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_NAME} is running at version {MyPluginInfo.PLUGIN_VERSION}");
@@ -28,6 +45,13 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
     private void TryInitialize() {
         TrackCollectionRegistrationEvent.EVENT.Register(new TrackCollectionListener());
-        TrackReloader.ReloadAll(null);
+        // specific settings to only show Baboons! track, for testing
+        WorldSettings.MinDiff = 6;
+        WorldSettings.MaxDiff = 6;
+        WorldSettings.Unsafe = false;
+        WorldSettings.RemovedTracks = [
+            "Chop Waltz", "Funiculi Funicula", "Hello! Ma Baby", "Rosamunde", "SkaBIRD", "Skeleton Rag"
+        ];
+        OnWorldSettingsChanged();
     }
 }

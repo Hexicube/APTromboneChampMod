@@ -27,7 +27,7 @@ public struct Track {
 }
 
 public class APTracks {
-    public static Track[] TRACKS = [
+    public static readonly Track[] TRACKS = [
         new Track(  1, "Are U Ready", 7),
         new Track(  2, "Arirang", 3),
         new Track(  3, "Auld Lang Syne", 7),
@@ -163,15 +163,16 @@ public class APTracks {
                     (track.DLC == "Celeste" && settings.Celeste) ||
                     (track.DLC == "Pizza Tower" && settings.PizzaTower) ||
                     (track.DLC == "UTDR" && settings.UndertaleDeltarune)
-                )
+                ) &&
+                !settings.RemovedTracks.Contains(track.Name)
             ) {
                 yield return track;
             }
         }
     }
 
-    public static void SetGoalTrack(APSettings settings, string name) {
-        if (settings.GoalTracks == 0) settings.GoalTrack = null;
-        else settings.GoalTrack = GetTrackList(settings).First(track => track.Name == name);
+    public static Track? GetGoalTrack(APSettings settings, Track[] tracks) {
+        if (settings.GoalTracks == 0) return null;
+        return tracks.First(track => track.Name == settings.GoalTrack);
     }
 }
