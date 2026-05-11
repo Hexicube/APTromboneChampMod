@@ -1,13 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.Enums;
+using Archipelago.MultiClient.Net.Models;
+using Archipelago.MultiClient.Net.Packets;
 using BaboonAPI.Hooks;
 using BaboonAPI.Hooks.Initializer;
 using BaboonAPI.Hooks.Tracks;
 using BepInEx;
 using BepInEx.Logging;
-using JetBrains.Annotations;
 
 namespace APTromboneChampMod;
 
@@ -25,14 +27,114 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     public static int APTeam = -1, APSlot = -1;
     public static Version VERSION = new(0, 6, 7);
 
+    public static List<long> ITEMS = [];
+    public static List<long> SENT_LOCS = [];
+    
+    public static void OnReceivedItems(List<long> items) {
+        ITEMS.AddRange(items);
+        bool updateTracks = false;
+        bool refreshHints = false;
+        foreach (long item in items) {
+            if ((item > 0L && item < 1000L) || item is 1001L or 1004L || item > 1010L) updateTracks = true;
+            if (item is 1001L or 1004L or 1011L) refreshHints = true;
+        }
+        if (updateTracks) OnTrackAvailabilityChanged();
+        else if (refreshHints) ; // TODO
+    }
+
+    public static bool IsTrackAvailable(Track track) {
+        if (APSession is null || APSlot == -1) return false;
+        
+        if (!FilteredTracks.Contains(track)) return false;
+        if (WorldSettings.TrackGating && !ITEMS.Contains(track.ID)) return false;
+        if (track.Difficulty > WorldSettings.MinDiff) {
+            if (WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
+                if (!ITEMS.Contains(1010L + track.Difficulty)) return false;
+            }
+            if (WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
+                int diff = track.Difficulty - WorldSettings.MinDiff;
+                if (diff > ITEMS.Count(id => id == 1011L)) return false;
+            }
+        }
+        if (track.Name == WorldSettings.GoalTrack) {
+            int hotDogs = ITEMS.Count(id => id == 1004L);
+            if (hotDogs < WorldSettings.HotDogs) return false;
+            int rank = ITEMS.Count(id => id == 1001L);
+            int req = WorldSettings.InitialRating - WorldSettings.GoalRating;
+            if (rank < req) return false;
+        }
+        return true;
+    }
+
+    public static void SendTrack(Track track, bool beaten) {
+        if (APSession is null || APSlot == -1) return;
+        long[] IDs = beaten ? [track.ID, track.ID + 1000L] : [track.ID];
+        APSession.Locations.CompleteLocationChecksAsync(IDs);
+    }
+
+    public static bool CanHint() {
+        if (APSession is null || APSlot == -1) return false;
+        return APSession.RoomState.HintPoints >= APSession.RoomState.HintCost;
+    }
+
+    public static void TryHintTrack(Track track) {
+        if (!WorldSettings.TrackGating) return;
+        if (!CanHint()) return;
+        // TODO: verify not already hinted
+        string loc = APSession.Locations.GetLocationNameFromId(track.ID);
+        if (loc is not null) APSession.Say($"!hint {loc}");
+    }
+
+    public static void TryHintDifficulty(int diff) {
+        if (WorldSettings.DifficultyGating == APSettings.DiffGateType.OFF) return;
+        if (!CanHint()) return;
+        if (WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) diff = 1;
+        // TODO: verify not already hinted
+        string loc = APSession.Locations.GetLocationNameFromId(1010L + diff);
+        if (loc is not null) APSession.Say($"!hint {loc}");
+    }
+
+    public static void TryHintRankReduction() {
+        if (WorldSettings.GoalRating == WorldSettings.InitialRating) return;
+        if (!CanHint()) return;
+        // TODO: verify not already hinted
+        string loc = APSession.Locations.GetLocationNameFromId(1001L);
+        if (loc is not null) APSession.Say($"!hint {loc}");
+    }
+
+    public static void TryHintHotDog() {
+        if (WorldSettings.HotDogs == 0) return;
+        if (!CanHint()) return;
+        // TODO: verify not already hinted
+        string loc = APSession.Locations.GetLocationNameFromId(1004L);
+        if (loc is not null) APSession.Say($"!hint {loc}");
+    }
+
     public static void ConnectToAP(string host, int port, string slot, string pass) {
         Logger.LogInfo($"Connecting to {host}:{port}");
         APSession?.Socket.DisconnectAsync();
+        APSession = null;
         APSlot = -1;
+        OnWorldSettingsChanged();
         try {
             APSession = ArchipelagoSessionFactory.CreateSession(host, port);
+            APSession.Items.ItemReceived += (helper) => {
+                List<long> items = [];
+                ItemInfo item;
+                while (helper.Any()) {
+                    item = helper.PeekItem();
+                    items.Add(item.ItemId);
+                    helper.DequeueItem();
+                }
+                OnReceivedItems(items);
+            };
+            APSession.Locations.CheckedLocationsUpdated += (helper) => {
+                SENT_LOCS.Clear();
+                SENT_LOCS.AddRange(helper);
+                OnTrackAvailabilityChanged();
+            };
             // TODO: add event handlers before connecting
-            LoginResult result = APSession.TryConnectAndLogin(
+            LoginResult result = APSession.TryConnectAndLogin( // TODO: async version
                 "Trombone Champ", slot,
                 ItemsHandlingFlags.AllItems,
                 VERSION, [], null, pass, true
@@ -59,7 +161,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         }
     }
 
-    public void OnWorldSettingsChanged() {
+    public static void OnWorldSettingsChanged() {
         // called when connecting to an AP session
         if (APSession is not null) {
         }
@@ -80,7 +182,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
     public static Track[] AvailableTracks = [];
 
-    public void OnTrackAvailabilityChanged() {
+    public static void OnTrackAvailabilityChanged() {
         // called when receiving items that might change what tracks are playable
         // TODO: list of items to check against
         // TODO: list of locations to determine if a track has been completed
