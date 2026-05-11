@@ -69,8 +69,23 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
     public static void SendTrack(Track track, bool beaten) {
         if (APSession is null || APSlot == -1) return;
+        if (!IsTrackAvailable(track)) return; // precaution
         long[] IDs = beaten ? [track.ID, track.ID + 1000L] : [track.ID];
         APSession.Locations.CompleteLocationChecksAsync(IDs);
+        if (beaten) {
+            // goal logic
+            if (WorldSettings.GoalTracks == 0) {
+                if (GoalTrack.HasValue) {
+                    if (track.ID == GoalTrack.Value.ID) APSession.SetGoalAchieved();
+                }
+                else Logger.LogWarning("Goal tracks is 0 and no goal track is set!");
+            }
+            else {
+                int numBeaten = SENT_LOCS.Count(id => id > 1000L);
+                if (!SENT_LOCS.Contains(track.ID + 1000L)) numBeaten++;
+                if (numBeaten >= WorldSettings.GoalTracks) APSession.SetGoalAchieved();
+            }
+        }
     }
 
     public static bool CanHint() {
