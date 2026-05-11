@@ -10,6 +10,7 @@ using BaboonAPI.Hooks.Initializer;
 using BaboonAPI.Hooks.Tracks;
 using BepInEx;
 using BepInEx.Logging;
+using Newtonsoft.Json.Linq;
 
 namespace APTromboneChampMod;
 
@@ -153,7 +154,24 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
             APTeam = success.Team;
             APSlot = success.Slot;
             Logger.LogInfo($"Successfully connected to {host}:{port} - Team: {APTeam}, Slot: {APSlot}");
-            // TODO: success.SlotData (for item names)
+            
+            WorldSettings.GoalTracks = int.Parse(success.SlotData["goal"].ToString());
+            WorldSettings.GoalTrack = success.SlotData["goal_track"].ToString();
+            WorldSettings.GoalRating = int.Parse(success.SlotData["rating"].ToString());
+            WorldSettings.InitialRating = int.Parse(success.SlotData["rating_start"].ToString());
+            WorldSettings.EasyTrackGap = int.Parse(success.SlotData["easy_track"].ToString());
+            WorldSettings.HotDogs = int.Parse(success.SlotData["hot_dogs"].ToString());
+            WorldSettings.ExtraHotDogs = int.Parse(success.SlotData["extra_hot_dogs"].ToString());
+            WorldSettings.TrackGating = int.Parse(success.SlotData["track_gating"].ToString()) > 0;
+            WorldSettings.DifficultyGating = (APSettings.DiffGateType)int.Parse(success.SlotData["difficulty_gating"].ToString());
+            WorldSettings.MinDiff = int.Parse(success.SlotData["min_diff"].ToString());
+            WorldSettings.MaxDiff = int.Parse(success.SlotData["max_diff"].ToString());
+            WorldSettings.Unsafe = int.Parse(success.SlotData["unsafe"].ToString()) != 0;
+            WorldSettings.Celeste = int.Parse(success.SlotData["celeste"].ToString()) != 0;
+            WorldSettings.PizzaTower = int.Parse(success.SlotData["pizza_tower"].ToString()) != 0;
+            WorldSettings.UndertaleDeltarune = int.Parse(success.SlotData["undertale_deltarune"].ToString()) != 0;
+            WorldSettings.RemovedTracks = ((JArray)success.SlotData["removed_tracks"]).ToObject<string[]>();
+            OnWorldSettingsChanged();
         }
         catch (Exception e) {
             Logger.LogError($"Unusual error: {e.Message}");
@@ -164,6 +182,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     public static void OnWorldSettingsChanged() {
         // called when connecting to an AP session
         if (APSession is not null) {
+            // TODO: load settings from world
         }
         else {
             // specific settings to only show Baboons! track, for testing
@@ -178,16 +197,15 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         FilteredTracks = APTracks.GetTrackList(WorldSettings).ToArray();
         GoalTrack = APTracks.GetGoalTrack(WorldSettings, FilteredTracks);
         OnTrackAvailabilityChanged();
+        TrackReloader.ReloadAll(null);
     }
 
     public static Track[] AvailableTracks = [];
 
     public static void OnTrackAvailabilityChanged() {
         // called when receiving items that might change what tracks are playable
-        // TODO: list of items to check against
-        // TODO: list of locations to determine if a track has been completed
-        AvailableTracks = FilteredTracks;
-        TrackReloader.ReloadAll(null);
+        AvailableTracks = FilteredTracks.Where(IsTrackAvailable).ToArray();
+        // TODO: make sure a track cant be played if not available
     }
     
     private void Awake() {

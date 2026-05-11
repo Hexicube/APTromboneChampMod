@@ -173,6 +173,6 @@ public class APTracks {
 
     public static Track? GetGoalTrack(APSettings settings, Track[] tracks) {
         if (settings.GoalTracks == 0) return null;
-        return tracks.First(track => track.Name == settings.GoalTrack);
+        return tracks.FirstOrDefault(track => track.Name == settings.GoalTrack);
     }
 }
