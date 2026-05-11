@@ -172,20 +172,33 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
             
             WorldSettings.GoalTracks = int.Parse(success.SlotData["goal"].ToString());
             WorldSettings.GoalTrack = success.SlotData["goal_track"].ToString();
+            if (WorldSettings.GoalTracks == 0) Logger.LogInfo($"Goal track: {WorldSettings.GoalTrack}");
+            else Logger.LogInfo($"Goal track count: {WorldSettings.GoalTracks}");
             WorldSettings.GoalRating = int.Parse(success.SlotData["rating"].ToString());
             WorldSettings.InitialRating = int.Parse(success.SlotData["rating_start"].ToString());
+            Logger.LogInfo($"Goal rating: {WorldSettings.GoalRating} | Initial Rating: {WorldSettings.InitialRating}");
             WorldSettings.EasyTrackGap = int.Parse(success.SlotData["easy_track"].ToString());
+            Logger.LogInfo($"Easy Track Gap: {WorldSettings.EasyTrackGap}");
             WorldSettings.HotDogs = int.Parse(success.SlotData["hot_dogs"].ToString());
             WorldSettings.ExtraHotDogs = int.Parse(success.SlotData["extra_hot_dogs"].ToString());
+            Logger.LogInfo($"HotDogs: {WorldSettings.HotDogs} + {WorldSettings.ExtraHotDogs}");
             WorldSettings.TrackGating = int.Parse(success.SlotData["track_gating"].ToString()) > 0;
+            Logger.LogInfo($"Track gating: {WorldSettings.TrackGating}");
             WorldSettings.DifficultyGating = (APSettings.DiffGateType)int.Parse(success.SlotData["difficulty_gating"].ToString());
+            Logger.LogInfo($"Difficulty gating: {WorldSettings.DifficultyGating}");
             WorldSettings.MinDiff = int.Parse(success.SlotData["min_diff"].ToString());
             WorldSettings.MaxDiff = int.Parse(success.SlotData["max_diff"].ToString());
+            Logger.LogInfo($"Difficulty range: {WorldSettings.MinDiff} - {WorldSettings.MaxDiff}");
             WorldSettings.Unsafe = int.Parse(success.SlotData["unsafe"].ToString()) != 0;
+            Logger.LogInfo($"Unsafe: {WorldSettings.Unsafe}");
             WorldSettings.Celeste = int.Parse(success.SlotData["celeste"].ToString()) != 0;
+            Logger.LogInfo($"Celeste DLC: {WorldSettings.Celeste}");
             WorldSettings.PizzaTower = int.Parse(success.SlotData["pizza_tower"].ToString()) != 0;
+            Logger.LogInfo($"Pizza Tower DLC: {WorldSettings.PizzaTower}");
             WorldSettings.UndertaleDeltarune = int.Parse(success.SlotData["undertale_deltarune"].ToString()) != 0;
+            Logger.LogInfo($"Undertale/Deltarune DLC: {WorldSettings.UndertaleDeltarune}");
             WorldSettings.RemovedTracks = ((JArray)success.SlotData["removed_tracks"]).ToObject<string[]>();
+            Logger.LogInfo($"Removed tracks: {string.Join(", ", WorldSettings.RemovedTracks)}");
             OnWorldSettingsChanged();
         }
         catch (Exception e) {
@@ -196,18 +209,10 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
     public static void OnWorldSettingsChanged() {
         // called when connecting to an AP session
-        if (APSession is not null) {
-            // TODO: load settings from world
-        }
-        else {
-            // specific settings to only show Baboons! track, for testing
-            WorldSettings.MinDiff = 6;
-            WorldSettings.MaxDiff = 6;
-            WorldSettings.Unsafe = false;
-            WorldSettings.RemovedTracks = [
-                "Chop Waltz", "Funiculi Funicula", "Hello! Ma Baby", "Rosamunde", "SkaBIRD", "Skeleton Rag"
-            ];
-            // TODO: show a disconnected notice
+        if (APSession is null) {
+            // force the collection to be empty
+            WorldSettings.MinDiff = 2;
+            WorldSettings.MaxDiff = 1;
         }
         FilteredTracks = APTracks.GetTrackList(WorldSettings).ToArray();
         GoalTrack = APTracks.GetGoalTrack(WorldSettings, FilteredTracks);

@@ -173,6 +173,11 @@ public class APTracks {
 
     public static Track? GetGoalTrack(APSettings settings, Track[] tracks) {
         if (settings.GoalTracks == 0) return null;
-        return tracks.FirstOrDefault(track => track.Name == settings.GoalTrack);
+        Track res = tracks.FirstOrDefault(track => track.Name == settings.GoalTrack);
+        if (res.Name != settings.GoalTrack) {
+            ArchipelagoPlugin.Logger.LogWarning("Goal track count is 0 and goal track failed to resolve to a track!");
+            return null;
+        }
+        return res;
     }
 }
