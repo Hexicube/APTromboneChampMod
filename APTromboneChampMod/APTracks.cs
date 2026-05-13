@@ -1,9 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace APTromboneChampMod;
 
-public struct Track {
+public struct Track : IEquatable<Track> {
     public long ID;
     public string Name;
     public int Difficulty;
@@ -17,6 +18,10 @@ public struct Track {
         this.Unsafe = Unsafe;
         this.DLC = DLC;
     }
+
+    public bool Equals(Track other) => ID == other.ID;
+    public override bool Equals(object obj) => obj is Track other && Equals(other);
+    public override int GetHashCode() => (int)ID;
 }
 
 public class APTracks {
@@ -165,7 +170,7 @@ public class APTracks {
     }
 
     public static Track? GetGoalTrack(APSettings settings, Track[] tracks) {
-        if (settings.GoalTracks == 0) return null;
+        if (settings.GoalTracks > 0) return null;
         Track res = tracks.FirstOrDefault(track => track.Name == settings.GoalTrack);
         if (res.Name != settings.GoalTrack) {
             ArchipelagoPlugin.Logger.LogWarning("Goal track count is 0 and goal track failed to resolve to a track!");

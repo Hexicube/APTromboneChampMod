@@ -361,6 +361,7 @@ public static class APHandler {
     public static void OnTrackAvailabilityChanged() {
         // called when receiving items that might change what tracks are playable
         AvailableTracks = FilteredTracks.Where(IsTrackAvailable).ToArray();
+        TrackReloader.ReloadAll(null);
         // TODO: make sure a track cant be played if not available
         // TODO: update hint display specific to currently visible track
     }

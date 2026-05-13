@@ -4,6 +4,7 @@ using BaboonAPI.Hooks.Initializer;
 using BaboonAPI.Hooks.Tracks;
 using BepInEx;
 using BepInEx.Logging;
+using HarmonyLib;
 using UnityEngine;
 
 namespace APTromboneChampMod;
@@ -11,6 +12,8 @@ namespace APTromboneChampMod;
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 [BepInDependency("ch.offbeatwit.baboonapi.plugin")]
 public class ArchipelagoPlugin : BaseUnityPlugin {
+    private static Harmony _harmony = new Harmony("archipelago");
+    
     public static ArchipelagoPlugin Instance;
     internal new static ManualLogSource Logger;
 
@@ -35,6 +38,32 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
     private void TryInitialize() {
         TrackCollectionRegistrationEvent.EVENT.Register(new TrackCollectionListener());
+        
+        _harmony.PatchAll();
+    }
+
+    [HarmonyPatch(typeof(PointSceneController), nameof(PointSceneController.Awake))]
+    class ScoreScreenChecker {
+        static void Postfix() {
+            // scores should be available at this stage
+            // 135% = wall break, 100% = S, 80% = A, 60% = B, 40% = C, 20% = D
+            float scorePct = GlobalVariables.gameplay_scoreperc;
+            int achievedRating = (int)(scorePct / .2f) - 2; // C = 0, S = 3
+            if (achievedRating > 3) { // at least 120%
+                if (GlobalVariables.gameplay_perfect) achievedRating = 5; // perfect track
+                else if (scorePct >= 1.35) achievedRating = 4; // wall break
+                else achievedRating = 3; // S
+            }
+            bool beaten = achievedRating >= APHandler.GetRequiredRating();
+            Track track = APHandler.AvailableTracks.FirstOrDefault(track => track.Name == GlobalVariables.chosen_track_data.trackname_short);
+            if (track.Name == GlobalVariables.chosen_track_data.trackname_short) { // make sure it exists
+                Logger.LogInfo($"Track end screen: {GlobalVariables.chosen_track_data.trackname_short}");
+                Logger.LogInfo($"Score: {scorePct}");
+                Logger.LogInfo($"Rating: {achievedRating}");
+                Logger.LogInfo($"Beaten: {beaten}");
+                APHandler.SendTrack(track, beaten);
+            }
+        }
     }
 
     void Update()
