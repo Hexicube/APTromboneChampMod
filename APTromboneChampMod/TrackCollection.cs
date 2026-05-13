@@ -11,7 +11,7 @@ namespace APTromboneChampMod;
 
 public class TrackCollection() : BaseTromboneCollection("AP", "Archipelago", "All tracks required for Archipelago") {
     public override IEnumerable<TromboneTrack> BuildTrackList() {
-        ArrayList unseen = new ArrayList(ArchipelagoPlugin.FilteredTracks);
+        ArrayList unseen = new ArrayList(APHandler.FilteredTracks);
         List<string> unknownTracks = [];
         foreach (TromboneTrack track in TrackLookup.allTracks()) {
             Track? match = null;
