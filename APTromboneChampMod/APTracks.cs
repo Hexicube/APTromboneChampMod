@@ -17,13 +17,6 @@ public struct Track {
         this.Unsafe = Unsafe;
         this.DLC = DLC;
     }
-
-    public override bool Equals(object obj) {
-        if (obj is null) return false;
-        if (obj is Track track) return base.Equals(track);
-        if (obj is string name) return name == Name;
-        return false;
-    }
 }
 
 public class APTracks {
