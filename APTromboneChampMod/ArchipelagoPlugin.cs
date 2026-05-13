@@ -4,7 +4,6 @@ using System.Linq;
 using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Models;
-using Archipelago.MultiClient.Net.Packets;
 using BaboonAPI.Hooks;
 using BaboonAPI.Hooks.Initializer;
 using BaboonAPI.Hooks.Tracks;
@@ -30,18 +29,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
     public static List<long> ITEMS = [];
     public static List<long> SENT_LOCS = [];
-    
-    public static void OnReceivedItems(List<long> items) {
-        ITEMS.AddRange(items);
-        bool updateTracks = false;
-        bool refreshHints = false;
-        foreach (long item in items) {
-            if ((item > 0L && item < 1000L) || item is 1001L or 1004L || item > 1010L) updateTracks = true;
-            if (item is 1001L or 1004L or 1011L) refreshHints = true;
-        }
-        if (updateTracks) OnTrackAvailabilityChanged();
-        else if (refreshHints) ; // TODO
-    }
+    public static Hint[] HINTS = [];
 
     public static bool IsTrackAvailable(Track track) {
         if (APSession is null || APSlot == -1) return false;
@@ -93,10 +81,109 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         return APSession.RoomState.HintPoints >= APSession.RoomState.HintCost;
     }
 
+    public static TrackHints GetTrackHints(Track track) {
+        /*
+        Returns a struct containing the following information (assuming the relevant items are not found and the hints exist):
+        - A hint for the track unlock item, if track gating is on
+        - An array for difficulty unlock items:
+          - If difficulty gating is off, difficulty gating is not blocking this track, a size 0 array
+          - If difficulty gating is on, a size 1 array for the specific difficulty
+          - If difficulty gating is progressive, an array sized for how many progressive difficulties remain
+        - A hint for the play reward of the track, if not already completed
+        - A hint for the beat reward of the track, if not already completed
+        Hints may be null to represent a missing item with no associated hint.
+        */
+        
+        TrackHints hints = new();
+        if (WorldSettings.TrackGating) {
+            if (!ITEMS.Contains(track.ID)) {
+                Hint hint = null;
+                foreach (Hint h in HINTS) {
+                    if (h.ReceivingPlayer == APSlot && h.ItemId == track.ID) {
+                        hint = h;
+                        break;
+                    }
+                }
+                hints.TrackUnlock = hint;
+            }
+        }
+
+        if (track.Difficulty > WorldSettings.MinDiff) {
+            if (WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
+                if (!ITEMS.Contains(1010L + track.Difficulty)) {
+                    Hint hint = null;
+                    foreach (Hint h in HINTS) {
+                        if (h.ReceivingPlayer == APSlot && h.ItemId == 1010L + track.Difficulty) {
+                            hint = h;
+                            break;
+                        }
+                    }
+                    hints.DifficultyUnlocks = [hint];
+                }
+            }
+            if (WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
+                int req = track.Difficulty - WorldSettings.MinDiff;
+                int found = ITEMS.Count(id => id == 1011L);
+                if (found < req) {
+                    int total = WorldSettings.MaxDiff - WorldSettings.MinDiff - 1;
+                    total -= found;
+                    Hint[] list = new Hint[total];
+                    int idx = 0;
+                    foreach (Hint h in HINTS) {
+                        if (h.ReceivingPlayer == APSlot && h.ItemId == 1011L) list[idx++] = h;
+                    }
+                    hints.DifficultyUnlocks = list;
+                }
+            }
+        }
+
+        if (!SENT_LOCS.Contains(track.ID)) {
+            Hint hint = null;
+            foreach (Hint h in HINTS) {
+                if (h.FindingPlayer == APSlot && h.LocationId == track.ID) {
+                    hint = h;
+                    break;
+                }
+            }
+            hints.PlayReward = hint;
+        }
+        if (!SENT_LOCS.Contains(track.ID + 1000L)) {
+            Hint hint = null;
+            foreach (Hint h in HINTS) {
+                if (h.FindingPlayer == APSlot && h.LocationId == track.ID + 1000L) {
+                    hint = h;
+                    break;
+                }
+            }
+            hints.BeatReward = hint;
+        }
+
+        return hints;
+    }
+
+    public Hint[] GetHotDogHints() {
+        /*
+        Gets an array containing hints for all remaining hot dogs.
+        The array may contain null entries to represent unhinted hot dogs.
+        The array size matches the number of missing hot dogs.
+        Returns an empty array if enough hot dogs were found to unlock the goal track.
+        */
+        int total = WorldSettings.HotDogs + WorldSettings.ExtraHotDogs;
+        int found = ITEMS.Count(id => id == 1004L);
+        if (found >= WorldSettings.HotDogs) return [];
+        total -= found;
+        Hint[] list = new Hint[total];
+        int idx = 0;
+        foreach (Hint h in HINTS) {
+            if (h.ReceivingPlayer == APSlot && h.ItemId == 1004L) list[idx++] = h;
+        }
+        return list;
+    }
+
     public static void TryHintTrack(Track track) {
         if (!WorldSettings.TrackGating) return;
         if (!CanHint()) return;
-        // TODO: verify not already hinted
+        if (HINTS.Any(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == track.ID)) return;
         string loc = APSession.Locations.GetLocationNameFromId(track.ID);
         if (loc is not null) APSession.Say($"!hint {loc}");
     }
@@ -104,8 +191,16 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     public static void TryHintDifficulty(int diff) {
         if (WorldSettings.DifficultyGating == APSettings.DiffGateType.OFF) return;
         if (!CanHint()) return;
-        if (WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) diff = 1;
-        // TODO: verify not already hinted
+        if (WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
+            if (HINTS.Any(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1010L + diff)) return;
+        }
+        if (WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
+            diff = 1;
+            int total = WorldSettings.MaxDiff - WorldSettings.MinDiff - 1 - ITEMS.Count(id => id == 1011L);
+            if (total == 0) return;
+            int found = HINTS.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1011L);
+            if (found >= total) return;
+        }
         string loc = APSession.Locations.GetLocationNameFromId(1010L + diff);
         if (loc is not null) APSession.Say($"!hint {loc}");
     }
@@ -113,7 +208,10 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     public static void TryHintRankReduction() {
         if (WorldSettings.GoalRating == WorldSettings.InitialRating) return;
         if (!CanHint()) return;
-        // TODO: verify not already hinted
+        int total = WorldSettings.InitialRating - WorldSettings.GoalRating - ITEMS.Count(id => id == 1001L);
+        if (total == 0) return;
+        int found = HINTS.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1001L);
+        if (found >= total) return;
         string loc = APSession.Locations.GetLocationNameFromId(1001L);
         if (loc is not null) APSession.Say($"!hint {loc}");
     }
@@ -121,7 +219,12 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     public static void TryHintHotDog() {
         if (WorldSettings.HotDogs == 0) return;
         if (!CanHint()) return;
-        // TODO: verify not already hinted
+        int total = WorldSettings.HotDogs + WorldSettings.ExtraHotDogs;
+        int found = ITEMS.Count(id => id == 1004L);
+        if (found >= WorldSettings.HotDogs) return;
+        total -= found;
+        found = HINTS.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1004L);
+        if (found >= total) return;
         string loc = APSession.Locations.GetLocationNameFromId(1004L);
         if (loc is not null) APSession.Say($"!hint {loc}");
     }
@@ -149,6 +252,10 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 SENT_LOCS.AddRange(helper);
                 OnTrackAvailabilityChanged();
             };
+            APSession.Hints.TrackHints((hints) => {
+                HINTS = hints.Where(hint => !hint.Found).ToArray();
+                OnHintsChanged();
+            });
             // TODO: add event handlers before connecting
             LoginResult result = APSession.TryConnectAndLogin( // TODO: async version
                 "Trombone Champ", slot,
@@ -206,10 +313,33 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
             Logger.LogError(e.StackTrace);
         }
     }
+    
+    public static void OnReceivedItems(List<long> items) {
+        ITEMS.AddRange(items);
+        bool updateTracks = false;
+        bool updateHints = false;
+        bool refreshHints = false;
+        foreach (long item in items) {
+            if ((item > 0L && item < 1000L) || item is 1001L or 1004L || item > 1010L) updateTracks = true;
+            if (item is 1001L or 1004L or 1011L) refreshHints = true;
+            if (item > 1011L) updateHints = true;
+        }
+        if (refreshHints) {
+            // there are multiple of these specific items, this tends to break hint tracking
+            HINTS = APSession.Hints.GetHints().Where(hint => !hint.Found).ToArray();
+            OnHintsChanged();
+        }
+        else if (updateHints) OnHintsChanged(); // specific difficulty unlocks only
+        if (updateTracks) OnTrackAvailabilityChanged();
+    }
+
+    public static void OnHintsChanged() {
+        // TODO: update hint displays when added
+    }
 
     public static void OnWorldSettingsChanged() {
         // called when connecting to an AP session
-        if (APSession is null) {
+        if (APSession is null || APSlot == -1) {
             // force the collection to be empty
             WorldSettings.MinDiff = 2;
             WorldSettings.MaxDiff = 1;
@@ -226,6 +356,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         // called when receiving items that might change what tracks are playable
         AvailableTracks = FilteredTracks.Where(IsTrackAvailable).ToArray();
         // TODO: make sure a track cant be played if not available
+        // TODO: update hint display specific to currently visible track
     }
     
     private void Awake() {
