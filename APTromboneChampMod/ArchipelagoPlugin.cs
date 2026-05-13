@@ -15,9 +15,9 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     internal new static ManualLogSource Logger;
 
     // Logging
+    private string uri = "archipelago.gg";
+    private string port = "38281"; // port is later on parsed to int
     private string slotname = "";
-    private string uri = "";
-    private string port = ""; // port is later on parsed to int
     private string password = "";
 
     // UI
@@ -86,7 +86,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         GUILayout.Label("Server Password (Optional): ");
         password = GUILayout.PasswordField(password, '*', GUILayout.Width(200));
 
-        if (GUILayout.Button("Connect Archipelago", GUILayout.Height(30)) && int.TryParse(port, out int portInt)) 
+        if (GUILayout.Button("Connect Archipelago", GUILayout.Height(30)) && int.TryParse(port.Trim(), out int portInt)) 
         {
             APHandler.ConnectToAP(uri, portInt, slotname, password);
         }
@@ -109,6 +109,15 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
             goal = $"Beat tracks: {numBeaten}/{APHandler.WorldSettings.GoalTrack}";
         }
         GUILayout.Label(goal);
+
+        if (APHandler.WorldSettings.HotDogs > 0) {
+            int found = APHandler.ITEMS.Count(id => id == 1004L);
+            if (APHandler.WorldSettings.ExtraHotDogs > 0) {
+                int total = APHandler.WorldSettings.HotDogs + APHandler.WorldSettings.ExtraHotDogs;
+                GUILayout.Label($"Hot Dogs: {found}/{APHandler.WorldSettings.HotDogs} ({total})");
+            }
+            else GUILayout.Label($"Hot Dogs: {found}/{APHandler.WorldSettings.HotDogs}");
+        }
 
         string[] ratings = ["C", "B", "A", "S"];
         GUILayout.Label($"Required rating: {ratings[APHandler.GetRequiredRating()]}");
@@ -140,17 +149,6 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 GUILayout.Label($"Max difficulty: {maxDiff}/{APHandler.WorldSettings.MaxDiff}");
             }
         
-            GUILayout.Space(10);
-        }
-
-        if (APHandler.WorldSettings.HotDogs > 0) {
-            int found = APHandler.ITEMS.Count(id => id == 1004L);
-            if (APHandler.WorldSettings.ExtraHotDogs > 0) {
-                int total = APHandler.WorldSettings.HotDogs + APHandler.WorldSettings.ExtraHotDogs;
-                GUILayout.Label($"Hot Dogs: {found}/{APHandler.WorldSettings.HotDogs} ({total})");
-            }
-            else GUILayout.Label($"Hot Dogs: {found}/{APHandler.WorldSettings.HotDogs}");
-            
             GUILayout.Space(10);
         }
 
