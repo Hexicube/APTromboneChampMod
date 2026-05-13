@@ -52,6 +52,9 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
     void OnGUI()
     {
+        // show that the AP mod loaded ok
+        GUI.DrawTexture(new Rect(10, 10, 40, 40), Base64Images.Archipelago.texture);
+
         if (curGUI != -1) windowRect = GUI.Window(curGUI, windowRect, WindowHandler, "Archipelago Menu");
     }
 
