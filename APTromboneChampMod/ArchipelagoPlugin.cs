@@ -21,7 +21,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     private string password = "";
 
     // UI
-    private int curGUI = -1;
+    public int curGUI = -1;
     private Rect windowRect = new Rect(20, 20, 500, 300);
     
     private void Awake() {

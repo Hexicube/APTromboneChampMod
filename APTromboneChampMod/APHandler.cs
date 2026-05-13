@@ -353,6 +353,9 @@ public static class APHandler {
         GoalTrack = APTracks.GetGoalTrack(WorldSettings, FilteredTracks);
         OnTrackAvailabilityChanged();
         TrackReloader.ReloadAll(null);
+
+        if (ArchipelagoPlugin.Instance.curGUI == 0 && APSlot != -1) ArchipelagoPlugin.Instance.curGUI = 1;
+        if (ArchipelagoPlugin.Instance.curGUI == 1 && APSlot == -1) ArchipelagoPlugin.Instance.curGUI = 0;
     }
 
     public static void OnTrackAvailabilityChanged() {
