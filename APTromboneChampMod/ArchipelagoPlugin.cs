@@ -19,7 +19,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     private string password = "";
 
     // UI
-    private bool showGui = false;
+    private int curGUI = -1;
     private Rect windowRect = new Rect(20, 20, 500, 300);
     
     private void Awake() {
@@ -39,20 +39,31 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     {
         if (Input.GetKeyDown(KeyCode.F1))
         {
-            showGui = !showGui;
+            if (curGUI == -1) curGUI = 0;
+            else curGUI = -1;
         }
-
     }
 
     void OnGUI()
     {
-        if (showGui) 
+        if (curGUI != -1) windowRect = GUI.Window(curGUI, windowRect, WindowHandler, "Archipelago Menu");
+    }
+
+    void WindowHandler(int ID)
+    {
+        switch (ID)
         {
-            windowRect = GUI.Window(0, windowRect, ShowWindow, "Archipelago Menu");
+            case 0:
+                ShowLoginWindow();
+                break;
+            default:
+                Logger.LogWarning($"Unknown GUI ID: {ID}");
+                curGUI = -1;
+                break;
         }
     }
 
-    void ShowWindow(int windowID)
+    void ShowLoginWindow()
     {
         GUILayout.Label("Server URI: ");
         uri = GUILayout.TextField(uri, GUILayout.Width(200));
@@ -70,8 +81,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         {
             APHandler.ConnectToAP(uri, portInt, slotname, password);
         }
-        
-        if (GUILayout.Button("Close"))
-            showGui = false;
+
+        if (GUILayout.Button("Close")) curGUI = -1;
     }
 }
