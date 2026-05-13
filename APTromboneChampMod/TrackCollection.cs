@@ -36,7 +36,7 @@ public class TrackCollection() : BaseTromboneCollection("AP", "Archipelago", "Al
     }
 
     public override Coroutines.YieldTask<FSharpResult<Sprite, string>> LoadSprite() {
-        return Coroutines.sync(FuncConvert.FromFunc(() => FSharpResult<Sprite, string>.NewOk(Base64Images.Archipelago)));
+        return Coroutines.sync(FuncConvert.FromFunc(() => FSharpResult<Sprite, string>.NewOk(Base64Images.ArchipelagoCollection)));
     }
 }
 
