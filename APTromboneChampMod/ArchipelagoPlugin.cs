@@ -10,6 +10,7 @@ using BaboonAPI.Hooks.Tracks;
 using BepInEx;
 using BepInEx.Logging;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 namespace APTromboneChampMod;
 
@@ -30,6 +31,16 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     public static List<long> ITEMS = [];
     public static List<long> SENT_LOCS = [];
     public static Hint[] HINTS = [];
+
+    // Logging
+    private string slotname = "";
+    private string uri = "";
+    private string port = ""; // port is later on parsed to int
+    private string password = "";
+
+    // UI
+    private bool showGui = false;
+    private Rect windowRect = new Rect(20, 20, 500, 300);
 
     public static bool IsTrackAvailable(Track track) {
         if (APSession is null || APSlot == -1) return false;
@@ -370,6 +381,45 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
     private void TryInitialize() {
         TrackCollectionRegistrationEvent.EVENT.Register(new TrackCollectionListener());
-        ConnectToAP("localhost", 38281, "HexiTrombone", null);
+    }
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.F1))
+        {
+            showGui = !showGui;
+        }
+
+    }
+
+    void OnGUI()
+    {
+        if (showGui) 
+        {
+            windowRect = GUI.Window(0, windowRect, ShowWindow, "Archipelago Menu");
+        }
+    }
+
+    void ShowWindow(int windowID)
+    {
+        GUILayout.Label("Server URI: ");
+        uri = GUILayout.TextField(uri, GUILayout.Width(200));
+
+        GUILayout.Label("Server Port: ");
+        port = GUILayout.TextField(port, GUILayout.Width(200));
+
+        GUILayout.Label("Server Slotname: ");
+        slotname = GUILayout.TextField(slotname, GUILayout.Width(200));
+
+        GUILayout.Label("Server Password (Optional): ");
+        password = GUILayout.PasswordField(password, '*', GUILayout.Width(200));
+
+        if (GUILayout.Button("Connect Archipelago", GUILayout.Height(30)) && int.TryParse(port, out int portInt)) 
+        {
+            ConnectToAP(uri, portInt, slotname, password);
+        }
+        
+        if (GUILayout.Button("Close"))
+            showGui = false;
     }
 }
