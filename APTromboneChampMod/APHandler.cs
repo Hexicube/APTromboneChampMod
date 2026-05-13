@@ -47,6 +47,13 @@ public static class APHandler {
         return true;
     }
 
+    public static int GetRequiredRating() {
+        // 0=C 1=B 2=A 3=S
+        int initial = WorldSettings.InitialRating;
+        initial -= ITEMS.Count(id => id == 1001L);
+        return initial;
+    }
+
     public static void SendTrack(Track track, bool beaten) {
         if (APSession is null || APSlot == -1) return;
         if (!IsTrackAvailable(track)) return; // precaution
@@ -248,6 +255,12 @@ public static class APHandler {
                 HINTS = hints.Where(hint => !hint.Found).ToArray();
                 OnHintsChanged();
             });
+            APSession.Socket.SocketClosed += (reason) => {
+                ArchipelagoPlugin.Logger.LogInfo($"Socket closed: {reason}");
+                APSlot = -1;
+                APSession = null;
+                OnWorldSettingsChanged();
+            };
             // TODO: add event handlers before connecting
             LoginResult result = APSession.TryConnectAndLogin( // TODO: async version
                 "Trombone Champ", slot,

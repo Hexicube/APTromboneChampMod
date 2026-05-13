@@ -1,4 +1,6 @@
-﻿using BaboonAPI.Hooks.Initializer;
+﻿using System.Collections.Generic;
+using System.Linq;
+using BaboonAPI.Hooks.Initializer;
 using BaboonAPI.Hooks.Tracks;
 using BepInEx;
 using BepInEx.Logging;
@@ -39,7 +41,11 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     {
         if (Input.GetKeyDown(KeyCode.F1))
         {
-            if (curGUI == -1) curGUI = 0;
+            if (curGUI == -1)
+            {
+                if (APHandler.APSlot == -1) curGUI = 0;
+                else curGUI = 1;
+            }
             else curGUI = -1;
         }
     }
@@ -55,6 +61,9 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         {
             case 0:
                 ShowLoginWindow();
+                break;
+            case 1:
+                ShowTrackerWindow();
                 break;
             default:
                 Logger.LogWarning($"Unknown GUI ID: {ID}");
@@ -82,6 +91,74 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
             APHandler.ConnectToAP(uri, portInt, slotname, password);
         }
 
+        if (GUILayout.Button("Close")) curGUI = -1;
+    }
+
+    void ShowTrackerWindow()
+    {
+        GUILayout.Label("Connected to AP server.");
+        
+        GUILayout.Space(10);
+
+        Track[] tracks = APTracks.GetTrackList(APHandler.WorldSettings).ToArray();
+        
+        string goal;
+        if (APHandler.WorldSettings.GoalTracks == 0) goal = $"Goal track: {APHandler.WorldSettings.GoalTrack}";
+        else {
+            int numBeaten = tracks.Count(track => APHandler.SENT_LOCS.Contains(track.ID + 1000L));
+            goal = $"Beat tracks: {numBeaten}/{APHandler.WorldSettings.GoalTrack}";
+        }
+        GUILayout.Label(goal);
+
+        string[] ratings = ["C", "B", "A", "S"];
+        GUILayout.Label($"Required rating: {ratings[APHandler.GetRequiredRating()]}");
+
+        if (APHandler.WorldSettings.InitialRating != APHandler.WorldSettings.GoalRating) {
+            int total = APHandler.WorldSettings.InitialRating - APHandler.WorldSettings.GoalRating;
+            int found = APHandler.ITEMS.Count(id => id == 1001L);
+            GUILayout.Label($"Rating Reduction items: {found}/{total}");
+        }
+        
+        GUILayout.Space(10);
+
+        if (APHandler.WorldSettings.TrackGating ||
+            APHandler.WorldSettings.DifficultyGating != APSettings.DiffGateType.OFF) {
+            if (APHandler.WorldSettings.TrackGating) {
+                int found = tracks.Count(track => APHandler.ITEMS.Contains(track.ID));
+                GUILayout.Label($"Tracks unlocked: {found}/{tracks.Length}");
+            }
+
+            if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
+                List<int> unlockedDiffs = [APHandler.WorldSettings.MinDiff];
+                for (int a = APHandler.WorldSettings.MinDiff + 1; a <= APHandler.WorldSettings.MaxDiff; a++) {
+                    if (APHandler.ITEMS.Contains(a + 1010L)) unlockedDiffs.Add(a);
+                }
+                GUILayout.Label($"Difficulties unlocked: {string.Join(", ", unlockedDiffs)}");
+            }
+            if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
+                int maxDiff = APHandler.WorldSettings.MinDiff + APHandler.ITEMS.Count(id => id == 1011L);
+                GUILayout.Label($"Max difficulty: {maxDiff}/{APHandler.WorldSettings.MaxDiff}");
+            }
+        
+            GUILayout.Space(10);
+        }
+
+        if (APHandler.WorldSettings.HotDogs > 0) {
+            int found = APHandler.ITEMS.Count(id => id == 1004L);
+            if (APHandler.WorldSettings.ExtraHotDogs > 0) {
+                int total = APHandler.WorldSettings.HotDogs + APHandler.WorldSettings.ExtraHotDogs;
+                GUILayout.Label($"Hot Dogs: {found}/{APHandler.WorldSettings.HotDogs} ({total})");
+            }
+            else GUILayout.Label($"Hot Dogs: {found}/{APHandler.WorldSettings.HotDogs}");
+            
+            GUILayout.Space(10);
+        }
+
+        if (GUILayout.Button("Disconnect")) {
+            APHandler.APSession.Socket.DisconnectAsync();
+            APHandler.APSlot = -1;
+            curGUI = 0;
+        }
         if (GUILayout.Button("Close")) curGUI = -1;
     }
 }
