@@ -1,6 +1,6 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using BaboonAPI.Hooks.Tracks;
 using BaboonAPI.Hooks.Tracks.Collections;
 using BaboonAPI.Utility;
@@ -11,6 +11,7 @@ namespace APTromboneChampMod;
 
 public class TrackCollection() : BaseTromboneCollection("AP", "Archipelago", "All tracks required for Archipelago") {
     public override IEnumerable<TromboneTrack> BuildTrackList() {
+        int yielded = 0;
         ArrayList unseen = new ArrayList(APHandler.FilteredTracks);
         List<string> unknownTracks = [];
         foreach (TromboneTrack track in TrackLookup.allTracks()) {
@@ -23,6 +24,7 @@ public class TrackCollection() : BaseTromboneCollection("AP", "Archipelago", "Al
             }
             if (match != null) {
                 unseen.Remove(match);
+                yielded++;
                 yield return track;
             }
             else unknownTracks.Add(track.trackname_short);
@@ -33,6 +35,8 @@ public class TrackCollection() : BaseTromboneCollection("AP", "Archipelago", "Al
             foreach (string missed in unseen) ArchipelagoPlugin.Logger.LogInfo($"Missed track: {missed}");
             foreach (string unknown in unknownTracks) ArchipelagoPlugin.Logger.LogInfo($"Unknown track: {unknown}");
         }
+
+        if (yielded == 0) yield return TrackLookup.allTracks().First(track => track.trackname_short == "Warm-Up"); // prevents issues
     }
 
     public override Coroutines.YieldTask<FSharpResult<Sprite, string>> LoadSprite() {
@@ -42,6 +46,7 @@ public class TrackCollection() : BaseTromboneCollection("AP", "Archipelago", "Al
 
 public class TrackCollectionAvailWithChecksOnly() : BaseTromboneCollection("AP_checks", "Archipelago Checks", "Tracks that are unlocked and have checks remaining") {
     public override IEnumerable<TromboneTrack> BuildTrackList() {
+        int yielded = 0;
         ArrayList unseen = new ArrayList(APHandler.FilteredTracks);
         List<string> unknownTracks = [];
         foreach (TromboneTrack track in TrackLookup.allTracks()) {
@@ -58,7 +63,10 @@ public class TrackCollectionAvailWithChecksOnly() : BaseTromboneCollection("AP_c
                     if (
                         !APHandler.APSentLocations.Contains(match.Value.ID) ||
                         !APHandler.APSentLocations.Contains(match.Value.ID + 1000L)
-                    ) yield return track;
+                    ) {
+                        yielded++;
+                        yield return track;
+                    }
                 }
             }
             else unknownTracks.Add(track.trackname_short);
@@ -69,6 +77,8 @@ public class TrackCollectionAvailWithChecksOnly() : BaseTromboneCollection("AP_c
             foreach (string missed in unseen) ArchipelagoPlugin.Logger.LogInfo($"Missed track: {missed}");
             foreach (string unknown in unknownTracks) ArchipelagoPlugin.Logger.LogInfo($"Unknown track: {unknown}");
         }
+
+        if (yielded == 0) yield return TrackLookup.allTracks().First(track => track.trackname_short == "Warm-Up"); // prevents issues
     }
 
     public override Coroutines.YieldTask<FSharpResult<Sprite, string>> LoadSprite() {
