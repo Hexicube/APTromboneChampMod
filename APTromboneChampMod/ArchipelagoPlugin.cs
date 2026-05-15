@@ -61,6 +61,13 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 Logger.LogInfo($"Score: {scorePct}");
                 Logger.LogInfo($"Rating: {achievedRating}");
                 Logger.LogInfo($"Beaten: {beaten}");
+                
+                // precaution: prevent submitting a track you dont have
+                if (!APHandler.IsTrackAvailable(track)) {
+                    Logger.LogInfo("Submission blocked, track is not available.");
+                    return;
+                }
+                
                 APHandler.SendTrack(track, beaten);
             }
         }
@@ -81,6 +88,29 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     [HarmonyPatch(typeof(LevelSelectController), nameof(LevelSelectController.populateSongNames))]
     class ChangeSongDescriptionAndDisablePlay {
         static void Postfix(LevelSelectController __instance) {
+            // detect AP collections and look for edge-case of single track being Warm-Up
+            global::TrackCollection current = GlobalVariables.all_track_collections[GlobalVariables.chosen_collection_index];
+            if (current._unique_id is "AP" or "AP_checks") {
+                if (current._trackcount == 1 && current.all_tracks[0].trackname_short == "Warm-Up") {
+                    bool isFallback = false;
+                    if (current._unique_id == "AP" && APHandler.FilteredTracks.All(track => track.Name != "Warm-Up")) isFallback = true;
+                    if (current._unique_id == "AP_checks" && APHandler.AvailableTracks.All(track => track.Name != "Warm-Up")) isFallback = true;
+                    if (isFallback) {
+                        if (current._unique_id == "AP") {
+                            if (APHandler.APSlot == -1) __instance.songdesctext.text = "Not connected to AP!\nPress F1 to open connection manager.";
+                            else __instance.songdesctext.text = "AP song list is empty!\nReport this with your config included.";
+                        }
+                        else {
+                            if (APHandler.APSlot == -1) __instance.songdesctext.text = "Not connected to AP!\nPress F1 to open connection manager.";
+                            else __instance.songdesctext.text = "No songs left to play.\nMaybe hint something?";
+                        }
+                        __instance.playbtn.enabled = false;
+                        __instance.playbtn.gameObject.SetActive(false);
+                        return;
+                    }
+                }
+            }
+            
             bool canPlay = false;
             if (APHandler.APSlot == -1) canPlay = true;
             else {
