@@ -7,6 +7,7 @@ using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.Models;
 using BaboonAPI.Hooks;
 using Newtonsoft.Json.Linq;
+using UnityEngine.Yoga;
 
 namespace APTromboneChampMod;
 
@@ -115,7 +116,7 @@ public static class APHandler {
         PlayerInfo player = APSession.Players.GetPlayerInfo(hint.FindingPlayer);
         string gameName = player.Game;
         string locName = APSession.Locations.GetLocationNameFromId(hint.LocationId, gameName);
-        if (hint.Entrance != null) return $"{player.Alias}'s {locName} ({hint.Entrance})";
+        if (hint.Entrance != "") return $"{player.Alias}'s {locName} ({hint.Entrance})";
         return $"{player.Alias}'s {locName}";
     }
 
@@ -163,7 +164,7 @@ public static class APHandler {
                 int req = track.Difficulty - WorldSettings.MinDiff;
                 int found = APFoundItems.Count(id => id == 1011L);
                 if (found < req) {
-                    int total = WorldSettings.MaxDiff - WorldSettings.MinDiff - 1;
+                    int total = WorldSettings.MaxDiff - WorldSettings.MinDiff;
                     total -= found;
                     Hint[] list = new Hint[total];
                     int idx = 0;
@@ -292,6 +293,7 @@ public static class APHandler {
             };
             APSession.Hints.TrackHints((hints) => {
                 APReceivedHints = hints.Where(hint => !hint.Found).ToArray();
+                ArchipelagoPlugin.Logger.LogInfo($"Number of hints: {APReceivedHints.Length}");
                 OnHintsChanged();
             });
             APSession.Socket.SocketClosed += (reason) => {
@@ -351,6 +353,11 @@ public static class APHandler {
             WorldSettings.RemovedTracks = ((JArray)success.SlotData["removed_tracks"]).ToObject<string[]>();
             ArchipelagoPlugin.Logger.LogInfo($"Removed tracks: {string.Join(", ", WorldSettings.RemovedTracks)}");
             OnWorldSettingsChanged();
+
+            APSession.Hints.GetHintsAsync().ContinueWith(task => {
+                if (!task.IsCompletedSuccessfully) return;
+                APReceivedHints = task.Result.Where(hint => !hint.Found).ToArray();
+            });
         }
         catch (Exception e) {
             ArchipelagoPlugin.Logger.LogError($"Unusual error: {e.Message}");

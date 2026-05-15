@@ -33,8 +33,6 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         Instance = this;
         
         Logger = base.Logger;
-        Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_NAME} is running at version {MyPluginInfo.PLUGIN_VERSION}");
-        Logger.LogInfo($"Hello World!");
         GameInitializationEvent.Register(Info, TryInitialize);
     }
 
@@ -71,12 +69,12 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     [HarmonyPatch(typeof(LevelSelectController), nameof(LevelSelectController.clickPlay))]
     class PreventPlayingTrack {
         static bool Prefix(LevelSelectController __instance) {
-            if (APHandler.APSlot == -1) return false;
+            if (APHandler.APSlot == -1) return true;
             
             Track? track = APHandler.FindTrack(__instance.alltrackslist[__instance.songindex].trackname_short);
-            if (!track.HasValue) return true;
-            if (!APHandler.IsTrackAvailable(track.Value)) return true;
-            return false;
+            if (!track.HasValue) return false;
+            if (!APHandler.IsTrackAvailable(track.Value)) return false;
+            return true;
         }
     }
 
@@ -89,9 +87,14 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 Track? track = APHandler.FindTrack(__instance.alltrackslist[__instance.songindex].trackname_short);
                 if (track.HasValue) {
                     TrackHints hints = APHandler.GetTrackHints(track.Value);
+                    
                     bool hasPlay = APHandler.APSentLocations.Contains(track.Value.ID);
                     bool hasBeat = APHandler.APSentLocations.Contains(track.Value.ID + 1000L);
                     StringBuilder str = new();
+
+                    if (APHandler.GoalTrack.HasValue && APHandler.GoalTrack.Value.ID == track.Value.ID)
+                        str.Append("This is the goal track, beat it to win!\n");
+                    
                     if (APHandler.IsTrackAvailable(track.Value)) {
                         if (hasPlay && hasBeat) str.Append("Track already beaten.");
                         else {
@@ -138,7 +141,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                                 if (found < req) {
                                     str.Append($"\nDifficulty unlocks: {found}/{req}");
                                     foreach (Hint hint in hints.DifficultyUnlocks)
-                                        str.Append($"\nProgressive Difficulty: {APHandler.FormatItemHint(hint)}");
+                                        str.Append($"\nProgressive Difficulty: {APHandler.FormatLocationString(hint)}");
                                 }
                             }
                         }
