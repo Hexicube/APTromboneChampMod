@@ -66,12 +66,9 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         }
     }
 
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.F1))
-        {
-            if (curGUI == -1)
-            {
+    void Update() {
+        if (Input.GetKeyDown(KeyCode.F1)) {
+            if (curGUI == -1) {
                 if (APHandler.APSlot == -1) curGUI = 0;
                 else curGUI = 1;
             }
@@ -79,18 +76,15 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         }
     }
 
-    void OnGUI()
-    {
+    void OnGUI() {
         // show that the AP mod loaded ok
         GUI.DrawTexture(new Rect(10, 10, 40, 40), Base64Images.Archipelago.texture);
 
         if (curGUI != -1) windowRect = GUI.Window(curGUI, windowRect, WindowHandler, "Archipelago Menu");
     }
 
-    void WindowHandler(int ID)
-    {
-        switch (ID)
-        {
+    void WindowHandler(int ID) {
+        switch (ID) {
             case 0:
                 ShowLoginWindow();
                 break;
@@ -104,8 +98,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         }
     }
 
-    void ShowLoginWindow()
-    {
+    void ShowLoginWindow() {
         GUILayout.Label("Server URI: ");
         uri = GUILayout.TextField(uri, GUILayout.Width(200));
 
@@ -126,8 +119,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         if (GUILayout.Button("Close")) curGUI = -1;
     }
 
-    void ShowTrackerWindow()
-    {
+    void ShowTrackerWindow() {
         GUILayout.Label("Connected to AP server.");
         
         GUILayout.Space(10);
@@ -137,13 +129,13 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         string goal;
         if (APHandler.WorldSettings.GoalTracks == 0) goal = $"Goal track: {APHandler.WorldSettings.GoalTrack}";
         else {
-            int numBeaten = tracks.Count(track => APHandler.SENT_LOCS.Contains(track.ID + 1000L));
+            int numBeaten = tracks.Count(track => APHandler.APSentLocations.Contains(track.ID + 1000L));
             goal = $"Beat tracks: {numBeaten}/{APHandler.WorldSettings.GoalTrack}";
         }
         GUILayout.Label(goal);
 
         if (APHandler.WorldSettings.HotDogs > 0) {
-            int found = APHandler.ITEMS.Count(id => id == 1004L);
+            int found = APHandler.APFoundItems.Count(id => id == 1004L);
             if (APHandler.WorldSettings.ExtraHotDogs > 0) {
                 int total = APHandler.WorldSettings.HotDogs + APHandler.WorldSettings.ExtraHotDogs;
                 GUILayout.Label($"Hot Dogs: {found}/{APHandler.WorldSettings.HotDogs} ({total})");
@@ -156,7 +148,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
         if (APHandler.WorldSettings.InitialRating != APHandler.WorldSettings.GoalRating) {
             int total = APHandler.WorldSettings.InitialRating - APHandler.WorldSettings.GoalRating;
-            int found = APHandler.ITEMS.Count(id => id == 1001L);
+            int found = APHandler.APFoundItems.Count(id => id == 1001L);
             GUILayout.Label($"Rating Reduction items: {found}/{total}");
         }
         
@@ -165,19 +157,19 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         if (APHandler.WorldSettings.TrackGating ||
             APHandler.WorldSettings.DifficultyGating != APSettings.DiffGateType.OFF) {
             if (APHandler.WorldSettings.TrackGating) {
-                int found = tracks.Count(track => APHandler.ITEMS.Contains(track.ID));
+                int found = tracks.Count(track => APHandler.APFoundItems.Contains(track.ID));
                 GUILayout.Label($"Tracks unlocked: {found}/{tracks.Length}");
             }
 
             if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
                 List<int> unlockedDiffs = [APHandler.WorldSettings.MinDiff];
                 for (int a = APHandler.WorldSettings.MinDiff + 1; a <= APHandler.WorldSettings.MaxDiff; a++) {
-                    if (APHandler.ITEMS.Contains(a + 1010L)) unlockedDiffs.Add(a);
+                    if (APHandler.APFoundItems.Contains(a + 1010L)) unlockedDiffs.Add(a);
                 }
                 GUILayout.Label($"Difficulties unlocked: {string.Join(", ", unlockedDiffs)}");
             }
             if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
-                int maxDiff = APHandler.WorldSettings.MinDiff + APHandler.ITEMS.Count(id => id == 1011L);
+                int maxDiff = APHandler.WorldSettings.MinDiff + APHandler.APFoundItems.Count(id => id == 1011L);
                 GUILayout.Label($"Max difficulty: {maxDiff}/{APHandler.WorldSettings.MaxDiff}");
             }
         

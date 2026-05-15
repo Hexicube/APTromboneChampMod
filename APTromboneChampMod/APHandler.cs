@@ -17,30 +17,30 @@ public static class APHandler {
 
     public static ArchipelagoSession APSession = null;
     public static int APTeam = -1, APSlot = -1;
-    public static Version VERSION = new(0, 6, 7);
+    public static readonly Version APVersion = new(0, 6, 7);
 
-    public static List<long> ITEMS = [];
-    public static List<long> SENT_LOCS = [];
-    public static Hint[] HINTS = [];
+    public static readonly List<long> APFoundItems = [];
+    public static readonly List<long> APSentLocations = [];
+    public static Hint[] APReceivedHints = [];
     
     public static bool IsTrackAvailable(Track track) {
         if (APSession is null || APSlot == -1) return false;
         
         if (!FilteredTracks.Contains(track)) return false;
-        if (WorldSettings.TrackGating && !ITEMS.Contains(track.ID)) return false;
+        if (WorldSettings.TrackGating && !APFoundItems.Contains(track.ID)) return false;
         if (track.Difficulty > WorldSettings.MinDiff) {
             if (WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
-                if (!ITEMS.Contains(1010L + track.Difficulty)) return false;
+                if (!APFoundItems.Contains(1010L + track.Difficulty)) return false;
             }
             if (WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
                 int diff = track.Difficulty - WorldSettings.MinDiff;
-                if (diff > ITEMS.Count(id => id == 1011L)) return false;
+                if (diff > APFoundItems.Count(id => id == 1011L)) return false;
             }
         }
         if (track.Name == WorldSettings.GoalTrack) {
-            int hotDogs = ITEMS.Count(id => id == 1004L);
+            int hotDogs = APFoundItems.Count(id => id == 1004L);
             if (hotDogs < WorldSettings.HotDogs) return false;
-            int rank = ITEMS.Count(id => id == 1001L);
+            int rank = APFoundItems.Count(id => id == 1001L);
             int req = WorldSettings.InitialRating - WorldSettings.GoalRating;
             if (rank < req) return false;
         }
@@ -50,7 +50,7 @@ public static class APHandler {
     public static int GetRequiredRating() {
         // 0=C 1=B 2=A 3=S
         int initial = WorldSettings.InitialRating;
-        initial -= ITEMS.Count(id => id == 1001L);
+        initial -= APFoundItems.Count(id => id == 1001L);
         return initial;
     }
 
@@ -59,19 +59,18 @@ public static class APHandler {
         if (!IsTrackAvailable(track)) return; // precaution
         long[] IDs = beaten ? [track.ID, track.ID + 1000L] : [track.ID];
         APSession.Locations.CompleteLocationChecksAsync(IDs);
-        if (beaten) {
-            // goal logic
-            if (WorldSettings.GoalTracks == 0) {
-                if (GoalTrack.HasValue) {
-                    if (track.ID == GoalTrack.Value.ID) APSession.SetGoalAchieved();
-                }
-                else ArchipelagoPlugin.Logger.LogWarning("Goal tracks is 0 and no goal track is set!");
+        if (!beaten) return;
+        // goal logic
+        if (WorldSettings.GoalTracks == 0) {
+            if (GoalTrack.HasValue) {
+                if (track.ID == GoalTrack.Value.ID) APSession.SetGoalAchieved();
             }
-            else {
-                int numBeaten = SENT_LOCS.Count(id => id > 1000L);
-                if (!SENT_LOCS.Contains(track.ID + 1000L)) numBeaten++;
-                if (numBeaten >= WorldSettings.GoalTracks) APSession.SetGoalAchieved();
-            }
+            else ArchipelagoPlugin.Logger.LogWarning("Goal tracks is 0 and no goal track is set!");
+        }
+        else {
+            int numBeaten = APSentLocations.Count(id => id > 1000L);
+            if (!APSentLocations.Contains(track.ID + 1000L)) numBeaten++;
+            if (numBeaten >= WorldSettings.GoalTracks) APSession.SetGoalAchieved();
         }
     }
 
@@ -95,9 +94,9 @@ public static class APHandler {
         
         TrackHints hints = new();
         if (WorldSettings.TrackGating) {
-            if (!ITEMS.Contains(track.ID)) {
+            if (!APFoundItems.Contains(track.ID)) {
                 Hint hint = null;
-                foreach (Hint h in HINTS) {
+                foreach (Hint h in APReceivedHints) {
                     if (h.ReceivingPlayer == APSlot && h.ItemId == track.ID) {
                         hint = h;
                         break;
@@ -109,9 +108,9 @@ public static class APHandler {
 
         if (track.Difficulty > WorldSettings.MinDiff) {
             if (WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
-                if (!ITEMS.Contains(1010L + track.Difficulty)) {
+                if (!APFoundItems.Contains(1010L + track.Difficulty)) {
                     Hint hint = null;
-                    foreach (Hint h in HINTS) {
+                    foreach (Hint h in APReceivedHints) {
                         if (h.ReceivingPlayer == APSlot && h.ItemId == 1010L + track.Difficulty) {
                             hint = h;
                             break;
@@ -122,13 +121,13 @@ public static class APHandler {
             }
             if (WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
                 int req = track.Difficulty - WorldSettings.MinDiff;
-                int found = ITEMS.Count(id => id == 1011L);
+                int found = APFoundItems.Count(id => id == 1011L);
                 if (found < req) {
                     int total = WorldSettings.MaxDiff - WorldSettings.MinDiff - 1;
                     total -= found;
                     Hint[] list = new Hint[total];
                     int idx = 0;
-                    foreach (Hint h in HINTS) {
+                    foreach (Hint h in APReceivedHints) {
                         if (h.ReceivingPlayer == APSlot && h.ItemId == 1011L) list[idx++] = h;
                     }
                     hints.DifficultyUnlocks = list;
@@ -136,9 +135,9 @@ public static class APHandler {
             }
         }
 
-        if (!SENT_LOCS.Contains(track.ID)) {
+        if (!APSentLocations.Contains(track.ID)) {
             Hint hint = null;
-            foreach (Hint h in HINTS) {
+            foreach (Hint h in APReceivedHints) {
                 if (h.FindingPlayer == APSlot && h.LocationId == track.ID) {
                     hint = h;
                     break;
@@ -146,9 +145,9 @@ public static class APHandler {
             }
             hints.PlayReward = hint;
         }
-        if (!SENT_LOCS.Contains(track.ID + 1000L)) {
+        if (!APSentLocations.Contains(track.ID + 1000L)) {
             Hint hint = null;
-            foreach (Hint h in HINTS) {
+            foreach (Hint h in APReceivedHints) {
                 if (h.FindingPlayer == APSlot && h.LocationId == track.ID + 1000L) {
                     hint = h;
                     break;
@@ -168,12 +167,12 @@ public static class APHandler {
         Returns an empty array if enough hot dogs were found to unlock the goal track.
         */
         int total = WorldSettings.HotDogs + WorldSettings.ExtraHotDogs;
-        int found = ITEMS.Count(id => id == 1004L);
+        int found = APFoundItems.Count(id => id == 1004L);
         if (found >= WorldSettings.HotDogs) return [];
         total -= found;
         Hint[] list = new Hint[total];
         int idx = 0;
-        foreach (Hint h in HINTS) {
+        foreach (Hint h in APReceivedHints) {
             if (h.ReceivingPlayer == APSlot && h.ItemId == 1004L) list[idx++] = h;
         }
         return list;
@@ -182,7 +181,7 @@ public static class APHandler {
     public static void TryHintTrack(Track track) {
         if (!WorldSettings.TrackGating) return;
         if (!CanHint()) return;
-        if (HINTS.Any(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == track.ID)) return;
+        if (APReceivedHints.Any(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == track.ID)) return;
         string loc = APSession.Locations.GetLocationNameFromId(track.ID);
         if (loc is not null) APSession.Say($"!hint {loc}");
     }
@@ -191,13 +190,13 @@ public static class APHandler {
         if (WorldSettings.DifficultyGating == APSettings.DiffGateType.OFF) return;
         if (!CanHint()) return;
         if (WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
-            if (HINTS.Any(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1010L + diff)) return;
+            if (APReceivedHints.Any(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1010L + diff)) return;
         }
         if (WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
             diff = 1;
-            int total = WorldSettings.MaxDiff - WorldSettings.MinDiff - 1 - ITEMS.Count(id => id == 1011L);
+            int total = WorldSettings.MaxDiff - WorldSettings.MinDiff - 1 - APFoundItems.Count(id => id == 1011L);
             if (total == 0) return;
-            int found = HINTS.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1011L);
+            int found = APReceivedHints.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1011L);
             if (found >= total) return;
         }
         string loc = APSession.Locations.GetLocationNameFromId(1010L + diff);
@@ -207,9 +206,9 @@ public static class APHandler {
     public static void TryHintRankReduction() {
         if (WorldSettings.GoalRating == WorldSettings.InitialRating) return;
         if (!CanHint()) return;
-        int total = WorldSettings.InitialRating - WorldSettings.GoalRating - ITEMS.Count(id => id == 1001L);
+        int total = WorldSettings.InitialRating - WorldSettings.GoalRating - APFoundItems.Count(id => id == 1001L);
         if (total == 0) return;
-        int found = HINTS.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1001L);
+        int found = APReceivedHints.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1001L);
         if (found >= total) return;
         string loc = APSession.Locations.GetLocationNameFromId(1001L);
         if (loc is not null) APSession.Say($"!hint {loc}");
@@ -219,10 +218,10 @@ public static class APHandler {
         if (WorldSettings.HotDogs == 0) return;
         if (!CanHint()) return;
         int total = WorldSettings.HotDogs + WorldSettings.ExtraHotDogs;
-        int found = ITEMS.Count(id => id == 1004L);
+        int found = APFoundItems.Count(id => id == 1004L);
         if (found >= WorldSettings.HotDogs) return;
         total -= found;
-        found = HINTS.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1004L);
+        found = APReceivedHints.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1004L);
         if (found >= total) return;
         string loc = APSession.Locations.GetLocationNameFromId(1004L);
         if (loc is not null) APSession.Say($"!hint {loc}");
@@ -247,12 +246,12 @@ public static class APHandler {
                 OnReceivedItems(items);
             };
             APSession.Locations.CheckedLocationsUpdated += (helper) => {
-                SENT_LOCS.Clear();
-                SENT_LOCS.AddRange(helper);
+                APSentLocations.Clear();
+                APSentLocations.AddRange(helper);
                 OnTrackAvailabilityChanged();
             };
             APSession.Hints.TrackHints((hints) => {
-                HINTS = hints.Where(hint => !hint.Found).ToArray();
+                APReceivedHints = hints.Where(hint => !hint.Found).ToArray();
                 OnHintsChanged();
             });
             APSession.Socket.SocketClosed += (reason) => {
@@ -265,7 +264,7 @@ public static class APHandler {
             LoginResult result = APSession.TryConnectAndLogin( // TODO: async version
                 "Trombone Champ", slot,
                 ItemsHandlingFlags.AllItems,
-                VERSION, [], null, pass, true
+                APVersion, [], null, pass, true
             );
             if (!result.Successful)
             {
@@ -320,7 +319,7 @@ public static class APHandler {
     }
     
     public static void OnReceivedItems(List<long> items) {
-        ITEMS.AddRange(items);
+        APFoundItems.AddRange(items);
         bool updateTracks = false;
         bool updateHints = false;
         bool refreshHints = false;
@@ -331,7 +330,7 @@ public static class APHandler {
         }
         if (refreshHints) {
             // there are multiple of these specific items, this tends to break hint tracking
-            HINTS = APSession.Hints.GetHints().Where(hint => !hint.Found).ToArray();
+            APReceivedHints = APSession.Hints.GetHints().Where(hint => !hint.Found).ToArray();
             OnHintsChanged();
         }
         else if (updateHints) OnHintsChanged(); // specific difficulty unlocks only

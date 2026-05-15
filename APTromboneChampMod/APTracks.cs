@@ -4,20 +4,13 @@ using System.Linq;
 
 namespace APTromboneChampMod;
 
-public struct Track : IEquatable<Track> {
-    public long ID;
-    public string Name;
-    public int Difficulty;
-    public bool Unsafe;
-    public string DLC;
-
-    public Track(long ID, string Name, int Difficulty, bool Unsafe = false, string DLC = "Base") {
-        this.ID = ID;
-        this.Name = Name;
-        this.Difficulty = Difficulty;
-        this.Unsafe = Unsafe;
-        this.DLC = DLC;
-    }
+public readonly struct Track(long id, string name, int difficulty, bool allowUnsafe = false, string dlc = "Base")
+    : IEquatable<Track> {
+    public readonly long   ID         = id;
+    public readonly string Name       = name;
+    public readonly int    Difficulty = difficulty;
+    public readonly bool   Unsafe     = allowUnsafe;
+    public readonly string DLC        = dlc;
 
     public bool Equals(Track other) => ID == other.ID;
     public override bool Equals(object obj) => obj is Track other && Equals(other);

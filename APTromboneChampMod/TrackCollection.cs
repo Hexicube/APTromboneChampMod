@@ -56,8 +56,8 @@ public class TrackCollectionAvailWithChecksOnly() : BaseTromboneCollection("AP_c
                 unseen.Remove(match.Value);
                 if (APHandler.IsTrackAvailable(match.Value)) {
                     if (
-                        !APHandler.SENT_LOCS.Contains(match.Value.ID) ||
-                        !APHandler.SENT_LOCS.Contains(match.Value.ID + 1000L)
+                        !APHandler.APSentLocations.Contains(match.Value.ID) ||
+                        !APHandler.APSentLocations.Contains(match.Value.ID + 1000L)
                     ) yield return track;
                 }
             }

@@ -2,8 +2,7 @@ using Archipelago.MultiClient.Net.Models;
 
 namespace APTromboneChampMod;
 
-public struct TrackHints
-{
+public struct TrackHints {
     public TrackHints() {}
 
     public Hint TrackUnlock = null;
