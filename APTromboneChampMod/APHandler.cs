@@ -385,12 +385,12 @@ public static class APHandler {
                     }
                 }
             };
-            // TODO: add event handlers before connecting
             LoginResult result = APSession.TryConnectAndLogin( // TODO: async version
                 "Trombone Champ", slot,
                 ItemsHandlingFlags.AllItems,
                 APVersion, [], null, pass, true
             );
+            LastFunFact = DateTimeOffset.Now.ToUnixTimeMilliseconds();
             if (!result.Successful)
             {
                 // TODO: show errors
@@ -448,6 +448,39 @@ public static class APHandler {
             ArchipelagoPlugin.Logger.LogError(e.StackTrace);
         }
     }
+
+    private static long LastFunFact;
+
+    private static readonly string[] FunFacts = [
+        "It takes one-thousand workers a full year to produce a single trombone.",
+        "The trombone is related to the trumpet (they are cousins).",
+        "The trombone is not related to the French Horn (they are just friends).",
+        "Some claim that Mozart's last words before dying were \"At least I got to use a trombone.\"",
+        "A student's trombone generally costs between $100 and $300, but a professional trombone can cost over two billion dollars.",
+        "To this day, scientists don't really know how a trombone makes sound.",
+        "A professional trombone player is known as a \"tromboner\".",
+        "Thirty-four countries have outlawed the use of the trombone. In six countries, playing trombone is punishable by death.",
+        "Trombones contain \"spit valves\" that allow you to blow gobs of your nasty spit all over the floor.",
+        "Without trombones, there could never have been \"ska\" music. Draw your own conclusions from this factoid.",
+        "The average baboon can live to be over 300 years old.",
+        "There are more baboons on Earth than humans.",
+        "Prehistoric trombones were forty feet long and could weigh over six hundred pounds.",
+        "Trombones do not float in water, so do not accidentally drop your trombone into the river last week.",
+        "Cows love the sound of a trombone (because they are smart).",
+        "Playing trombone in your apartment is a great way to make friends with your neighbors.",
+        "Despite its name, the trombone does not have any bones.",
+        "There are between 2 and 4 spiders living inside the average trombone.",
+        "The first trombone was invented in 20,000,000 B.C.",
+        "If you placed all of the trombones on Earth end-to-end, they would wrap around the solar system 4 times.",
+        "There are more trombones on Earth than there are humans.",
+        "The highest note playable on trombones is so high-pitched that only certain species of bats can hear it.",
+        "The world record for \"Most Trombones Owned\" is held by Mike Brass of Omaha, Nebraska. He owns two trombones.",
+        "It takes over three thousand tons of brass to produce a single trombone.",
+        "In real life, there are over nine songs that feature a trombone.",
+        "In England, \"trombone\" is spelled \"troumboune\"."
+    ];
+
+    private static List<string> UnseenFacts = [];
     
     public static void OnReceivedItems(List<long> items) {
         APFoundItems.AddRange(items);
@@ -458,6 +491,18 @@ public static class APHandler {
             if ((item > 0L && item < 1000L) || item is 1001L or 1004L || item > 1010L) updateTracks = true;
             if (item is 1001L or 1004L or 1011L) refreshHints = true;
             if (item > 1011L) updateHints = true;
+            
+            if (item == 1003L && (DateTimeOffset.Now.ToUnixTimeMilliseconds() - LastFunFact) > 1000L) { // rate limit to 1/s
+                LastFunFact = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
+                if (UnseenFacts.Count == 0) {
+                    UnseenFacts.AddRange(FunFacts);
+                    UnseenFacts.Shuffle();
+                }
+                
+                APSession.Say($"FUN FACT: {UnseenFacts[0]}");
+                UnseenFacts.RemoveAt(0);
+            }
         }
         if (refreshHints) {
             // there are multiple of these specific items, this tends to break hint tracking
