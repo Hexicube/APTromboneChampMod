@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using Archipelago.MultiClient.Net.Models;
 using BaboonAPI.Hooks.Initializer;
 using BaboonAPI.Hooks.Tracks;
 using BepInEx;
@@ -63,6 +65,86 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 Logger.LogInfo($"Beaten: {beaten}");
                 APHandler.SendTrack(track, beaten);
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(LevelSelectController), nameof(LevelSelectController.clickPlay))]
+    class PreventPlayingTrack {
+        static bool Prefix(LevelSelectController __instance) {
+            if (APHandler.APSlot == -1) return false;
+            
+            Track? track = APHandler.FindTrack(__instance.alltrackslist[__instance.songindex].trackname_short);
+            if (!track.HasValue) return true;
+            if (!APHandler.IsTrackAvailable(track.Value)) return true;
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(LevelSelectController), nameof(LevelSelectController.populateSongNames))]
+    class ChangeSongDescriptionAndDisablePlay {
+        static void Postfix(LevelSelectController __instance) {
+            bool canPlay = false;
+            if (APHandler.APSlot == -1) canPlay = true;
+            else {
+                Track? track = APHandler.FindTrack(__instance.alltrackslist[__instance.songindex].trackname_short);
+                if (track.HasValue) {
+                    TrackHints hints = APHandler.GetTrackHints(track.Value);
+                    bool hasPlay = APHandler.APSentLocations.Contains(track.Value.ID);
+                    bool hasBeat = APHandler.APSentLocations.Contains(track.Value.ID + 1000L);
+                    StringBuilder str = new();
+                    if (APHandler.IsTrackAvailable(track.Value)) {
+                        if (hasPlay && hasBeat) str.Append("Track already beaten.");
+                        else {
+                            canPlay = true;
+                            str.Append("Can play this track!");
+                            str.Append($"\nRequired rating: {APHandler.GetRatingString(APHandler.GetRequiredRating())}");
+                            if (!hasPlay) str.Append($"\nPlay reward: {APHandler.FormatItemHint(hints.PlayReward)}");
+                            if (!hasBeat) str.Append($"\nBeat reward: {APHandler.FormatItemHint(hints.BeatReward)}");
+                        }
+                    }
+                    else {
+                        str.Append("Track locked.");
+                        
+                        if (APHandler.GoalTrack.HasValue && APHandler.GoalTrack.Value.ID == track.Value.ID) {
+                            // check hot dogs
+                            int reqHotDogs = APHandler.WorldSettings.HotDogs;
+                            if (reqHotDogs > 0) {
+                                int foundHotDogs = APHandler.APFoundItems.Count(id => id == 1004L);
+                                if (foundHotDogs < reqHotDogs) {
+                                    // Hint[] hotDogHints = APHandler.GetHotDogHints();
+                                    // TODO: how to show this large list of hints?
+                                    str.Append($"\nHot dogs: {foundHotDogs}/{reqHotDogs}");
+                                }
+                            }
+                        }
+                        
+                        if (APHandler.WorldSettings.TrackGating) {
+                            if (!APHandler.APFoundItems.Contains(track.Value.ID))
+                                str.Append($"\nTrack unlock: {APHandler.FormatLocationString(hints.TrackUnlock)}");
+                        }
+                        
+                        if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
+                            if (!APHandler.APFoundItems.Contains(track.Value.Difficulty + 1010L))
+                                str.Append($"\nDifficulty {track.Value.Difficulty}: {APHandler.FormatLocationString(hints.DifficultyUnlocks[0])}");
+                        }
+
+                        if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
+                            int req = track.Value.Difficulty - APHandler.WorldSettings.MinDiff;
+                            if (req > 0) {
+                                int found = APHandler.APFoundItems.Count(id => id == 1011L);
+                                if (found < req)
+                                    // TODO: list of difficulty unlock hints
+                                    str.Append($"\nDifficulty unlocks: {found}/{req}");
+                            }
+                        }
+                    }
+
+                    __instance.songdesctext.text = str.ToString();
+                }
+                else __instance.songdesctext.text = "Not an AP track.";
+            }
+            __instance.playbtn.enabled = canPlay;
+            __instance.playbtn.gameObject.SetActive(canPlay);
         }
     }
 

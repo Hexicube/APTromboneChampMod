@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.Enums;
+using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.Models;
 using BaboonAPI.Hooks;
 using Newtonsoft.Json.Linq;
@@ -22,6 +23,12 @@ public static class APHandler {
     public static readonly List<long> APFoundItems = [];
     public static readonly List<long> APSentLocations = [];
     public static Hint[] APReceivedHints = [];
+
+    public static Track? FindTrack(string name) {
+        Track track = FilteredTracks.FirstOrDefault(track => track.Name == name);
+        if (track.Name != name) return null;
+        return track;
+    }
     
     public static bool IsTrackAvailable(Track track) {
         if (APSession is null || APSlot == -1) return false;
@@ -45,6 +52,14 @@ public static class APHandler {
             if (rank < req) return false;
         }
         return true;
+    }
+
+    private static readonly string[] RatingToString = ["C", "B", "A", "S"];
+
+    public static string GetRatingString(int rating) {
+        if (rating < 0) rating = 0;
+        if (rating >= RatingToString.Length) rating = RatingToString.Length - 1;
+        return RatingToString[rating];
     }
 
     public static int GetRequiredRating() {
@@ -77,6 +92,31 @@ public static class APHandler {
     public static bool CanHint() {
         if (APSession is null || APSlot == -1) return false;
         return APSession.RoomState.HintPoints >= APSession.RoomState.HintCost;
+    }
+
+    public static string FormatItemHint(Hint hint) {
+        if (hint == null) return "-";
+        if (hint.ReceivingPlayer == APSlot) {
+            // own world, just return the name
+            return APSession.Items.GetItemName(hint.ItemId);
+        }
+        PlayerInfo player = APSession.Players.GetPlayerInfo(hint.ReceivingPlayer);
+        string gameName = player.Game;
+        string itemName = APSession.Items.GetItemName(hint.ItemId, gameName);
+        return $"{player.Alias}'s {itemName} ({hint.Status})";
+    }
+
+    public static string FormatLocationString(Hint hint) {
+        if (hint == null) return "-";
+        if (hint.FindingPlayer == APSlot) {
+            // own world, just return the track
+            return APSession.Locations.GetLocationNameFromId(hint.LocationId);
+        }
+        PlayerInfo player = APSession.Players.GetPlayerInfo(hint.FindingPlayer);
+        string gameName = player.Game;
+        string locName = APSession.Locations.GetLocationNameFromId(hint.LocationId, gameName);
+        if (hint.Entrance != null) return $"{player.Alias}'s {locName} ({hint.Entrance})";
+        return $"{player.Alias}'s {locName}";
     }
 
     public static TrackHints GetTrackHints(Track track) {
