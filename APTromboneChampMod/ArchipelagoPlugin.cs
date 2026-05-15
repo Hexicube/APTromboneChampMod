@@ -313,8 +313,6 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
             curGUI = 0;
         }
         if (GUILayout.Button("Close")) curGUI = -1;
-        
-        if (GUILayout.Button("Hint Hot Dog")) APHandler.TryHintHotDog();
     }
     
     private Vector2 hintScroll1 = Vector2.zero, hintScroll2 = Vector2.zero;
