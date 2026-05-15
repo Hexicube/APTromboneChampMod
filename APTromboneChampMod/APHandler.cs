@@ -8,7 +8,10 @@ using Archipelago.MultiClient.Net.MessageLog.Messages;
 using Archipelago.MultiClient.Net.MessageLog.Parts;
 using Archipelago.MultiClient.Net.Models;
 using BaboonAPI.Hooks;
+using BaboonAPI.Hooks.Tracks;
+using BaboonAPI.Hooks.Tracks.Collections;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 using UnityEngine.Yoga;
 
 namespace APTromboneChampMod;
@@ -470,7 +473,8 @@ public static class APHandler {
     }
 
     public static void OnHintsChanged() {
-        // TODO: update hint displays when added
+        LevelSelectController controller = UnityEngine.Object.FindObjectOfType<LevelSelectController>();
+        if (controller) controller.populateSongNames(false);
     }
 
     public static void OnWorldSettingsChanged() {
@@ -491,8 +495,47 @@ public static class APHandler {
     public static void OnTrackAvailabilityChanged() {
         // called when receiving items that might change what tracks are playable
         AvailableTracks = FilteredTracks.Where(IsTrackAvailable).ToArray();
+        
+        // get the currently selected song in the list
+        LevelSelectController controller = UnityEngine.Object.FindObjectOfType<LevelSelectController>();
+        if (controller) {
+            string name = controller.alltrackslist[controller.songindex].trackname_short;
+            
+            // check if the current collection is an AP one
+            global::TrackCollection current = GlobalVariables.all_track_collections[GlobalVariables.chosen_collection_index];
+            BaseTromboneCollection  thisCollection = null;
+            if (current._unique_id == "AP") thisCollection = new TrackCollection();
+            if (current._unique_id == "AP_checks") thisCollection = new TrackCollectionAvailWithChecksOnly();
+
+            if (thisCollection != null) {
+                // rebuild the collection manually so the track list actually updates
+                List<TromboneTrack> tracks = thisCollection.BuildTrackList().ToList();
+                global::TrackCollection allCollection = GlobalVariables.all_track_collections.First(coll => coll._unique_id == "all"); // from base game, contains every track
+                current.all_tracks = tracks.Select(track => {
+                    return allCollection.all_tracks.First(data => data.trackname_short == track.trackname_short);
+                }).ToList();
+                current._trackcount = tracks.Count;
+                
+                // skip sort, then do it with no animation
+                controller.selectNewCollection(true);
+                controller.sortTracks(GlobalVariables.sortmode, false);
+
+                // try and select the track that was previously selected
+                int idx = -1;
+                for (int a = 0; a < controller.alltrackslist.Count; a++) {
+                    if (controller.alltrackslist[a].trackname_short == name) {
+                        idx = a;
+                        break;
+                    }
+                }
+
+                if (idx != -1) {
+                    controller.songindex = idx;
+                    controller.populateSongNames(false); // repopulate names because index was changed
+                }
+            }
+        }
+
         TrackReloader.ReloadAll(null);
-        // TODO: make sure a track cant be played if not available
-        // TODO: update hint display specific to currently visible track
     }
 }
