@@ -347,11 +347,19 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                     GUILayout.BeginHorizontal();
                     GUILayout.Label($"Difficulty {diff}", GUILayout.Width(hintEntryWidth));
                     Hint theHint = APHandler.APReceivedHints.FirstOrDefault(hint => hint.ReceivingPlayer == APHandler.APSlot && hint.ItemId == diff + 1010L);
-                    if (theHint != null && theHint.ReceivingPlayer == APHandler.APSlot && theHint.ItemId == diff + 1010L) GUILayout.Label("HINTED", GUILayout.Width(hintEntryInfoWidth));
+                    if (theHint != null && theHint.ReceivingPlayer == APHandler.APSlot && theHint.ItemId == diff + 1010L) {
+                        GUI.enabled = false;
+                        GUILayout.Button("HINTED", GUILayout.Width(hintEntryInfoWidth));
+                        GUI.enabled = true;
+                    }
                     else if (canHint) {
                         if (GUILayout.Button("Hint", GUILayout.Width(hintEntryInfoWidth))) APHandler.TryHintDifficulty(diff);
                     }
-                    else GUILayout.Label("MISSING", GUILayout.Width(hintEntryInfoWidth));
+                    else {
+                        GUI.enabled = false;
+                        GUILayout.Button("MISSING", GUILayout.Width(hintEntryInfoWidth));
+                        GUI.enabled = true;
+                    }
                     GUILayout.EndHorizontal();
                 }
             }
@@ -368,8 +376,16 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 if (canHint) {
                     if (GUILayout.Button($"Hint {hints.Length}/{missing}", GUILayout.Width(hintEntryInfoWidth))) APHandler.TryHintDifficulty(1);
                 }
-                else if (hints.Length > 0) GUILayout.Label($"HINTED {hints.Length}/{missing}", GUILayout.Width(hintEntryInfoWidth));
-                else GUILayout.Label("MISSING", GUILayout.Width(hintEntryInfoWidth));
+                else if (hints.Length > 0) {
+                    GUI.enabled = false;
+                    GUILayout.Button($"HINTED {hints.Length}/{missing}", GUILayout.Width(hintEntryInfoWidth));
+                    GUI.enabled = true;
+                }
+                else {
+                    GUI.enabled = false;
+                    GUILayout.Button("MISSING", GUILayout.Width(hintEntryInfoWidth));
+                    GUI.enabled = true;
+                }
                 GUILayout.EndHorizontal();
             }
         }
@@ -387,8 +403,16 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 if (canHint) {
                     if (GUILayout.Button($"Hint {hints.Length}/{missing}", GUILayout.Width(hintEntryInfoWidth))) APHandler.TryHintRankReduction();
                 }
-                else if (hints.Length > 0) GUILayout.Label($"HINTED {hints.Length}/{missing}", GUILayout.Width(hintEntryInfoWidth));
-                else GUILayout.Label("MISSING", GUILayout.Width(hintEntryInfoWidth));
+                else if (hints.Length > 0) {
+                    GUI.enabled = false;
+                    GUILayout.Button($"HINTED {hints.Length}/{missing}", GUILayout.Width(hintEntryInfoWidth));
+                    GUI.enabled = true;
+                }
+                else {
+                    GUI.enabled = false;
+                    GUILayout.Button("MISSING", GUILayout.Width(hintEntryInfoWidth));
+                    GUI.enabled = true;
+                }
                 GUILayout.EndHorizontal();
             }
         }
@@ -406,8 +430,16 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 if (canHint) {
                     if (GUILayout.Button($"Hint {hints.Length}/{missing}", GUILayout.Width(hintEntryInfoWidth))) APHandler.TryHintHotDog();
                 }
-                else if (hints.Length > 0) GUILayout.Label($"HINTED {hints.Length}/{missing}", GUILayout.Width(hintEntryInfoWidth));
-                else GUILayout.Label("MISSING", GUILayout.Width(hintEntryInfoWidth));
+                else if (hints.Length > 0) {
+                    GUI.enabled = false;
+                    GUILayout.Button($"HINTED {hints.Length}/{missing}", GUILayout.Width(hintEntryInfoWidth));
+                    GUI.enabled = true;
+                }
+                else {
+                    GUI.enabled = false;
+                    GUILayout.Button("MISSING", GUILayout.Width(hintEntryInfoWidth));
+                    GUI.enabled = true;
+                }
                 GUILayout.EndHorizontal();
             }
         }
@@ -423,11 +455,19 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                     GUILayout.BeginHorizontal();
                     GUILayout.Label(track.Name, GUILayout.Width(hintEntryWidth));
                     Hint theHint = APHandler.APReceivedHints.FirstOrDefault(hint => hint.ReceivingPlayer == APHandler.APSlot && hint.ItemId == track.ID);
-                    if (theHint != null && theHint.ReceivingPlayer == APHandler.APSlot && theHint.ItemId == track.ID) GUILayout.Label("HINTED", GUILayout.Width(hintEntryInfoWidth));
+                    if (theHint != null && theHint.ReceivingPlayer == APHandler.APSlot && theHint.ItemId == track.ID) {
+                        GUI.enabled = false;
+                        GUILayout.Button("HINTED", GUILayout.Width(hintEntryInfoWidth));
+                        GUI.enabled = true;
+                    }
                     else if (canHint) {
                         if (GUILayout.Button("Hint", GUILayout.Width(hintEntryInfoWidth))) APHandler.TryHintTrack(track);
                     }
-                    else GUILayout.Label("MISSING", GUILayout.Width(hintEntryInfoWidth));
+                    else {
+                        GUI.enabled = false;
+                        GUILayout.Button("MISSING", GUILayout.Width(hintEntryInfoWidth));
+                        GUI.enabled = true;
+                    }
                     GUILayout.EndHorizontal();
                 }
             }
@@ -441,10 +481,24 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         // list of all received hints
         GUILayout.BeginVertical();
         hintScroll2 = GUILayout.BeginScrollView(hintScroll2, false, true, GUILayout.Width(340));
-        if (APHandler.APReceivedHints.Length == 0) GUILayout.Label("No hints!");
-        foreach (Hint hint in APHandler.APReceivedHints) {
-            GUILayout.Label(APHandler.FormatFullHint(hint));
+        // get all hints, except for own Nothing and Fun Fact items
+        Hint[] hintsNoFiller = APHandler.APReceivedHints.Where(hint => hint.ReceivingPlayer != APHandler.APSlot || (hint.ItemId != 1002L && hint.ItemId != 1003L)).ToArray();
+        if (hintsNoFiller.Length == 0) GUILayout.Label("No hints!");
+        else {
+            Hint[] ownLocalHints = hintsNoFiller.Where(hint => hint.FindingPlayer == APHandler.APSlot && hint.ReceivingPlayer == APHandler.APSlot).ToArray();
+            Hint[] ownHints      = hintsNoFiller.Where(hint => hint.FindingPlayer != APHandler.APSlot && hint.ReceivingPlayer == APHandler.APSlot).ToArray();
+            Hint[] otherHints    = hintsNoFiller.Where(hint =>                                           hint.ReceivingPlayer != APHandler.APSlot).ToArray();
+            foreach (Hint hint in ownLocalHints) {
+                GUILayout.Label(APHandler.FormatFullHint(hint));
+            }
+            foreach (Hint hint in ownHints) {
+                GUILayout.Label(APHandler.FormatFullHint(hint));
+            }
+            foreach (Hint hint in otherHints) {
+                GUILayout.Label(APHandler.FormatFullHint(hint));
+            }
         }
+
         GUILayout.EndScrollView();
         GUILayout.EndVertical();
         
