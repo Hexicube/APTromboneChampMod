@@ -136,9 +136,17 @@ public static class APHandler {
 
         string entrance = "";
         if (hint.Entrance != "") entrance = $" ({hint.Entrance})";
+        
+        if (ownGame) return $"{item} is at {location}"; // simpler string for local items
 
-        if (ownGame) return $"{receiver.Alias}'s {item} is at their {location}{entrance}";
-        return $"{receiver.Alias}'s {item} is at {finder.Alias}'s {location}{entrance}";
+        string receiverName = $"{receiver.Alias}'s ";
+        if (receiver.Slot == APSlot) receiverName = "";
+        string finderName = $"{finder.Alias}'s ";
+        if (finder.Slot == APSlot) finderName = "";
+        string hintStatus = $" ({hint.Status})";
+        if (receiver.Slot == APSlot) hintStatus = "";
+        
+        return $"{receiverName}{item} is at {finderName}{location}{entrance}{hintStatus}";
     }
 
     public static TrackHints GetTrackHints(Track track) {
