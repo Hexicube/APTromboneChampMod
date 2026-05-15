@@ -206,7 +206,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
     void OnGUI() {
         // show that the AP mod loaded ok
-        GUI.DrawTexture(new Rect(10, 10, 40, 40), Base64Images.Archipelago.texture);
+        GUI.DrawTexture(new Rect(10, 10, 40, 40), APHandler.APSlot == -1 ? Base64Images.ArchipelagoDisconnected.texture : Base64Images.Archipelago.texture);
 
         if (curGUI != -1) windowRect = GUI.Window(curGUI, windowRect, WindowHandler, "Archipelago Menu");
     }
@@ -399,7 +399,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
             int found = APHandler.APFoundItems.Count(id => id == 1004L);
             if (found < APHandler.WorldSettings.HotDogs) {
                 listedItem = true;
-                Hint[] hints = APHandler.GetHotDogHints();
+                Hint[] hints = APHandler.APReceivedHints.Where(hint => hint.ReceivingPlayer == APHandler.APSlot && hint.ItemId == 1004L).ToArray();
                 GUILayout.BeginHorizontal();
                 GUILayout.Label($"Hot Dog ({found}/{APHandler.WorldSettings.HotDogs} ({total}))");
                 int missing = total - found;
@@ -441,6 +441,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         // list of all received hints
         GUILayout.BeginVertical();
         hintScroll2 = GUILayout.BeginScrollView(hintScroll2, false, true);
+        if (APHandler.APReceivedHints.Length == 0) GUILayout.Label("No hints!");
         foreach (Hint hint in APHandler.APReceivedHints) {
             GUILayout.Label(APHandler.FormatFullHint(hint));
         }

@@ -221,25 +221,6 @@ public static class APHandler {
         return hints;
     }
 
-    public static Hint[] GetHotDogHints() {
-        /*
-        Gets an array containing hints for all remaining hot dogs.
-        The array may contain null entries to represent unhinted hot dogs.
-        The array size matches the number of missing hot dogs.
-        Returns an empty array if enough hot dogs were found to unlock the goal track.
-        */
-        int total = WorldSettings.HotDogs + WorldSettings.ExtraHotDogs;
-        int found = APFoundItems.Count(id => id == 1004L);
-        if (found >= WorldSettings.HotDogs) return [];
-        total -= found;
-        Hint[] list = new Hint[total];
-        int idx = 0;
-        foreach (Hint h in APReceivedHints) {
-            if (h.ReceivingPlayer == APSlot && h.ItemId == 1004L) list[idx++] = h;
-        }
-        return list;
-    }
-
     public static void TryHintTrack(Track track) {
         if (!WorldSettings.TrackGating) return;
         if (!CanHint()) return;
