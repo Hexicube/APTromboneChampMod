@@ -125,6 +125,22 @@ public static class APHandler {
         return $"{player.Alias}'s {locName}";
     }
 
+    public static string FormatFullHint(Hint hint) {
+        if (hint == null) return "-"; // should never happen
+        
+        PlayerInfo finder = APSession.Players.GetPlayerInfo(hint.FindingPlayer);
+        PlayerInfo receiver = APSession.Players.GetPlayerInfo(hint.ReceivingPlayer);
+        string location = APSession.Locations.GetLocationNameFromId(hint.LocationId, finder.Game);
+        string item = APSession.Items.GetItemName(hint.ItemId, receiver.Game);
+        bool ownGame = hint.ReceivingPlayer == hint.FindingPlayer;
+
+        string entrance = "";
+        if (hint.Entrance != "") entrance = $" ({hint.Entrance})";
+
+        if (ownGame) return $"{receiver.Alias}'s {item} is at their {location}{entrance}";
+        return $"{receiver.Alias}'s {item} is at {finder.Alias}'s {location}{entrance}";
+    }
+
     public static TrackHints GetTrackHints(Track track) {
         /*
         Returns a struct containing the following information (assuming the relevant items are not found and the hints exist):
@@ -240,7 +256,7 @@ public static class APHandler {
         }
         if (WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
             diff = 1;
-            int total = WorldSettings.MaxDiff - WorldSettings.MinDiff - 1 - APFoundItems.Count(id => id == 1011L);
+            int total = WorldSettings.MaxDiff - WorldSettings.MinDiff - APFoundItems.Count(id => id == 1011L);
             if (total == 0) return;
             int found = APReceivedHints.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1011L);
             if (found >= total) return;
@@ -495,6 +511,8 @@ public static class APHandler {
     public static void OnTrackAvailabilityChanged() {
         // called when receiving items that might change what tracks are playable
         AvailableTracks = FilteredTracks.Where(IsTrackAvailable).ToArray();
+
+        if (GlobalVariables.chosen_collection_index < 0 || GlobalVariables.chosen_collection_index >= GlobalVariables.all_track_collections.Count) return; // never loaded collections
             
         // check if the current collection is an AP one
         global::TrackCollection current = GlobalVariables.all_track_collections[GlobalVariables.chosen_collection_index];
@@ -533,6 +551,7 @@ public static class APHandler {
                     controller.songindex = idx;
                     controller.populateSongNames(false); // repopulate names because index was changed
                 }
+                if (idx == -1) controller.populateSongNames(true); // brief animations and triggers track preview to update
             }
         }
 

@@ -188,9 +188,17 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
     void Update() {
         if (Input.GetKeyDown(KeyCode.F1)) {
-            if (curGUI == -1) {
+            if (curGUI is -1 or > 1) {
                 if (APHandler.APSlot == -1) curGUI = 0;
                 else curGUI = 1;
+            }
+            else curGUI = -1;
+        }
+
+        if (Input.GetKeyDown(KeyCode.F2)) {
+            if (curGUI is not 2) {
+                if (APHandler.APSlot == -1) curGUI = 0;
+                else curGUI = 2;
             }
             else curGUI = -1;
         }
@@ -210,6 +218,9 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 break;
             case 1:
                 ShowTrackerWindow();
+                break;
+            case 2:
+                ShowHintWindow();
                 break;
             default:
                 Logger.LogWarning($"Unknown GUI ID: {ID}");
@@ -304,5 +315,145 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         if (GUILayout.Button("Close")) curGUI = -1;
         
         if (GUILayout.Button("Hint Hot Dog")) APHandler.TryHintHotDog();
+    }
+    
+    private Vector2 hintScroll1 = Vector2.zero, hintScroll2 = Vector2.zero;
+
+    void ShowHintWindow() {
+        if (APHandler.APSlot == -1) {
+            curGUI = 0;
+            return;
+        }
+
+        bool canHint = APHandler.CanHint();
+        GUILayout.Label($"Hint points: {APHandler.APSession.RoomState.HintPoints}/{APHandler.APSession.RoomState.HintCost}");
+        
+        GUILayout.BeginHorizontal();
+        // list of all hintable items with buttons to hint them
+        GUILayout.BeginVertical();
+        hintScroll1 = GUILayout.BeginScrollView(hintScroll1, false, true);
+        bool listedItem = false;
+        
+        // show missing difficulty items
+        if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
+            List<int> unfound = [];
+            for (int a = APHandler.WorldSettings.MinDiff + 1; a <= APHandler.WorldSettings.MaxDiff; a++) {
+                if (!APHandler.APFoundItems.Contains(a + 1010L)) unfound.Add(a);
+            }
+            if (unfound.Count > 0) {
+                listedItem = true;
+                GUILayout.Label($"Missing difficulties: {unfound.Count}");
+                foreach (int diff in unfound) {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label($"Difficulty {diff}");
+                    Hint theHint = APHandler.APReceivedHints.FirstOrDefault(hint => hint.ReceivingPlayer == APHandler.APSlot && hint.ItemId == diff + 1010L);
+                    if (theHint != null && theHint.ReceivingPlayer == APHandler.APSlot && theHint.ItemId == diff + 1010L) GUILayout.Label("HINTED");
+                    else if (canHint) {
+                        if (GUILayout.Button("Hint")) APHandler.TryHintDifficulty(diff);
+                    }
+                    else GUILayout.Label("MISSING");
+                    GUILayout.EndHorizontal();
+                }
+            }
+        }
+        if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
+            int total = APHandler.WorldSettings.MaxDiff - APHandler.WorldSettings.MinDiff;
+            int found = APHandler.APFoundItems.Count(id => id == 1011L);
+            if (found < total) {
+                listedItem = true;
+                Hint[] hints = APHandler.APReceivedHints.Where(hint => hint.ReceivingPlayer == APHandler.APSlot && hint.ItemId == 1011L).ToArray();
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"Progressive Difficulty ({found}/{total})");
+                int missing = total - found;
+                if (canHint) {
+                    if (GUILayout.Button($"Hint {hints.Length}/{missing}")) APHandler.TryHintDifficulty(1);
+                }
+                else if (hints.Length > 0) GUILayout.Label($"HINTED {hints.Length}/{missing}");
+                else GUILayout.Label("MISSING");
+                GUILayout.EndHorizontal();
+            }
+        }
+        
+        // show missing rank reductions
+        if (APHandler.WorldSettings.InitialRating != APHandler.WorldSettings.GoalRating) {
+            int total = APHandler.WorldSettings.InitialRating - APHandler.WorldSettings.GoalRating;
+            int found = APHandler.APFoundItems.Count(id => id == 1001L);
+            if (found < total) {
+                listedItem = true;
+                Hint[] hints = APHandler.APReceivedHints.Where(hint => hint.ReceivingPlayer == APHandler.APSlot && hint.ItemId == 1001L).ToArray();
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"Rank Reduction ({found}/{total})");
+                int missing = total - found;
+                if (canHint) {
+                    if (GUILayout.Button($"Hint {hints.Length}/{missing}")) APHandler.TryHintRankReduction();
+                }
+                else if (hints.Length > 0) GUILayout.Label($"HINTED {hints.Length}/{missing}");
+                else GUILayout.Label("MISSING");
+                GUILayout.EndHorizontal();
+            }
+        }
+        
+        // show missing hot dogs
+        if (APHandler.WorldSettings.HotDogs > 0) {
+            int total = APHandler.WorldSettings.HotDogs + APHandler.WorldSettings.ExtraHotDogs;
+            int found = APHandler.APFoundItems.Count(id => id == 1004L);
+            if (found < APHandler.WorldSettings.HotDogs) {
+                listedItem = true;
+                Hint[] hints = APHandler.GetHotDogHints();
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"Hot Dog ({found}/{APHandler.WorldSettings.HotDogs} ({total}))");
+                int missing = total - found;
+                if (canHint) {
+                    if (GUILayout.Button($"Hint {hints.Length}/{missing}")) APHandler.TryHintHotDog();
+                }
+                else if (hints.Length > 0) GUILayout.Label($"HINTED {hints.Length}/{missing}");
+                else GUILayout.Label("MISSING");
+                GUILayout.EndHorizontal();
+            }
+        }
+        
+        // show missing track unlocks
+        if (APHandler.WorldSettings.TrackGating) {
+            // show all missing track items
+            Track[] unfound = APHandler.FilteredTracks.Where(track => !APHandler.APFoundItems.Contains(track.ID)).ToArray();
+            if (unfound.Length > 0) {
+                listedItem = true;
+                GUILayout.Label($"Track unlocks remaining: {unfound.Length}");
+                foreach (Track track in unfound) {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(track.Name);
+                    Hint theHint = APHandler.APReceivedHints.FirstOrDefault(hint => hint.ReceivingPlayer == APHandler.APSlot && hint.ItemId == track.ID);
+                    if (theHint != null && theHint.ReceivingPlayer ==  APHandler.APSlot && theHint.ItemId == track.ID) GUILayout.Label("HINTED");
+                    else if (canHint) {
+                        if (GUILayout.Button("Hint")) APHandler.TryHintTrack(track);
+                    }
+                    else GUILayout.Label("MISSING");
+                    GUILayout.EndHorizontal();
+                }
+            }
+        }
+        
+        if (!listedItem) GUILayout.Label("No more items!");
+        
+        GUILayout.EndScrollView();
+        GUILayout.EndVertical();
+        
+        // list of all received hints
+        GUILayout.BeginVertical();
+        hintScroll2 = GUILayout.BeginScrollView(hintScroll2, false, true);
+        foreach (Hint hint in APHandler.APReceivedHints) {
+            GUILayout.Label(APHandler.FormatFullHint(hint));
+        }
+        GUILayout.EndScrollView();
+        GUILayout.EndVertical();
+        
+        GUILayout.EndHorizontal();
+
+        if (GUILayout.Button("Disconnect")) {
+            APHandler.APSession.Socket.DisconnectAsync();
+            APHandler.APSlot = -1;
+            curGUI = 0;
+        }
+        if (GUILayout.Button("Close")) curGUI = -1;
     }
 }
