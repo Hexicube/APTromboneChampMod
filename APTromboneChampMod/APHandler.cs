@@ -495,28 +495,28 @@ public static class APHandler {
     public static void OnTrackAvailabilityChanged() {
         // called when receiving items that might change what tracks are playable
         AvailableTracks = FilteredTracks.Where(IsTrackAvailable).ToArray();
-        
-        // get the currently selected song in the list
-        LevelSelectController controller = UnityEngine.Object.FindObjectOfType<LevelSelectController>();
-        if (controller) {
-            string name = controller.alltrackslist[controller.songindex].trackname_short;
             
-            // check if the current collection is an AP one
-            global::TrackCollection current = GlobalVariables.all_track_collections[GlobalVariables.chosen_collection_index];
-            BaseTromboneCollection  thisCollection = null;
-            if (current._unique_id == "AP") thisCollection = new TrackCollection();
-            if (current._unique_id == "AP_checks") thisCollection = new TrackCollectionAvailWithChecksOnly();
+        // check if the current collection is an AP one
+        global::TrackCollection current = GlobalVariables.all_track_collections[GlobalVariables.chosen_collection_index];
+        BaseTromboneCollection  thisCollection = null;
+        if (current._unique_id == "AP") thisCollection = new TrackCollection();
+        if (current._unique_id == "AP_checks") thisCollection = new TrackCollectionAvailWithChecksOnly();
 
-            if (thisCollection != null) {
-                // rebuild the collection manually so the track list actually updates
-                List<TromboneTrack> tracks = thisCollection.BuildTrackList().ToList();
-                global::TrackCollection allCollection = GlobalVariables.all_track_collections.First(coll => coll._unique_id == "all"); // from base game, contains every track
-                current.all_tracks = tracks.Select(track => {
-                    return allCollection.all_tracks.First(data => data.trackname_short == track.trackname_short);
-                }).ToList();
-                current._trackcount = tracks.Count;
+        if (thisCollection != null) {
+            // rebuild the collection manually so the track list actually updates
+            List<TromboneTrack> tracks = thisCollection.BuildTrackList().ToList();
+            global::TrackCollection allCollection = GlobalVariables.all_track_collections.First(coll => coll._unique_id == "all"); // from base game, contains every track
+            current.all_tracks = tracks.Select(track => {
+                return allCollection.all_tracks.First(data => data.trackname_short == track.trackname_short);
+            }).ToList();
+            current._trackcount = tracks.Count;
+            
+            LevelSelectController controller = UnityEngine.Object.FindObjectOfType<LevelSelectController>();
+            if (controller) {
+                // get the currently selected song in the list
+                string name = controller.alltrackslist[controller.songindex].trackname_short;
                 
-                // skip sort, then do it with no animation
+                // rebuild the controller's collection, with skipped sort, then do the sort with no animation
                 controller.selectNewCollection(true);
                 controller.sortTracks(GlobalVariables.sortmode, false);
 
@@ -529,7 +529,7 @@ public static class APHandler {
                     }
                 }
 
-                if (idx != -1) {
+                if (idx != -1 && idx != controller.songindex) {
                     controller.songindex = idx;
                     controller.populateSongNames(false); // repopulate names because index was changed
                 }
