@@ -27,7 +27,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
     // UI
     public int curGUI = -1;
-    private Rect windowRect = new Rect(20, 20, 500, 300);
+    private Rect windowRect = new Rect(20, 20, 700, 300);
     
     private void Awake() {
         Instance = this;
@@ -318,6 +318,8 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     }
     
     private Vector2 hintScroll1 = Vector2.zero, hintScroll2 = Vector2.zero;
+    private const int hintEntryWidth = 240;
+    private const int hintEntryInfoWidth = 70;
 
     void ShowHintWindow() {
         if (APHandler.APSlot == -1) {
@@ -331,7 +333,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         GUILayout.BeginHorizontal();
         // list of all hintable items with buttons to hint them
         GUILayout.BeginVertical();
-        hintScroll1 = GUILayout.BeginScrollView(hintScroll1, false, true);
+        hintScroll1 = GUILayout.BeginScrollView(hintScroll1, false, true, GUILayout.Width(340));
         bool listedItem = false;
         
         // show missing difficulty items
@@ -345,13 +347,13 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 GUILayout.Label($"Missing difficulties: {unfound.Count}");
                 foreach (int diff in unfound) {
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label($"Difficulty {diff}");
+                    GUILayout.Label($"Difficulty {diff}", GUILayout.Width(hintEntryWidth));
                     Hint theHint = APHandler.APReceivedHints.FirstOrDefault(hint => hint.ReceivingPlayer == APHandler.APSlot && hint.ItemId == diff + 1010L);
-                    if (theHint != null && theHint.ReceivingPlayer == APHandler.APSlot && theHint.ItemId == diff + 1010L) GUILayout.Label("HINTED");
+                    if (theHint != null && theHint.ReceivingPlayer == APHandler.APSlot && theHint.ItemId == diff + 1010L) GUILayout.Label("HINTED", GUILayout.Width(hintEntryInfoWidth));
                     else if (canHint) {
-                        if (GUILayout.Button("Hint")) APHandler.TryHintDifficulty(diff);
+                        if (GUILayout.Button("Hint", GUILayout.Width(hintEntryInfoWidth))) APHandler.TryHintDifficulty(diff);
                     }
-                    else GUILayout.Label("MISSING");
+                    else GUILayout.Label("MISSING", GUILayout.Width(hintEntryInfoWidth));
                     GUILayout.EndHorizontal();
                 }
             }
@@ -363,13 +365,13 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 listedItem = true;
                 Hint[] hints = APHandler.APReceivedHints.Where(hint => hint.ReceivingPlayer == APHandler.APSlot && hint.ItemId == 1011L).ToArray();
                 GUILayout.BeginHorizontal();
-                GUILayout.Label($"Progressive Difficulty ({found}/{total})");
+                GUILayout.Label($"Progressive Difficulty ({found}/{total})", GUILayout.Width(hintEntryWidth));
                 int missing = total - found;
                 if (canHint) {
-                    if (GUILayout.Button($"Hint {hints.Length}/{missing}")) APHandler.TryHintDifficulty(1);
+                    if (GUILayout.Button($"Hint {hints.Length}/{missing}", GUILayout.Width(hintEntryInfoWidth))) APHandler.TryHintDifficulty(1);
                 }
-                else if (hints.Length > 0) GUILayout.Label($"HINTED {hints.Length}/{missing}");
-                else GUILayout.Label("MISSING");
+                else if (hints.Length > 0) GUILayout.Label($"HINTED {hints.Length}/{missing}", GUILayout.Width(hintEntryInfoWidth));
+                else GUILayout.Label("MISSING", GUILayout.Width(hintEntryInfoWidth));
                 GUILayout.EndHorizontal();
             }
         }
@@ -382,13 +384,13 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 listedItem = true;
                 Hint[] hints = APHandler.APReceivedHints.Where(hint => hint.ReceivingPlayer == APHandler.APSlot && hint.ItemId == 1001L).ToArray();
                 GUILayout.BeginHorizontal();
-                GUILayout.Label($"Rank Reduction ({found}/{total})");
+                GUILayout.Label($"Rank Reduction ({found}/{total})", GUILayout.Width(hintEntryWidth));
                 int missing = total - found;
                 if (canHint) {
-                    if (GUILayout.Button($"Hint {hints.Length}/{missing}")) APHandler.TryHintRankReduction();
+                    if (GUILayout.Button($"Hint {hints.Length}/{missing}", GUILayout.Width(hintEntryInfoWidth))) APHandler.TryHintRankReduction();
                 }
-                else if (hints.Length > 0) GUILayout.Label($"HINTED {hints.Length}/{missing}");
-                else GUILayout.Label("MISSING");
+                else if (hints.Length > 0) GUILayout.Label($"HINTED {hints.Length}/{missing}", GUILayout.Width(hintEntryInfoWidth));
+                else GUILayout.Label("MISSING", GUILayout.Width(hintEntryInfoWidth));
                 GUILayout.EndHorizontal();
             }
         }
@@ -401,13 +403,13 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 listedItem = true;
                 Hint[] hints = APHandler.APReceivedHints.Where(hint => hint.ReceivingPlayer == APHandler.APSlot && hint.ItemId == 1004L).ToArray();
                 GUILayout.BeginHorizontal();
-                GUILayout.Label($"Hot Dog ({found}/{APHandler.WorldSettings.HotDogs} ({total}))");
+                GUILayout.Label($"Hot Dog ({found}/{APHandler.WorldSettings.HotDogs} ({total}))", GUILayout.Width(hintEntryWidth));
                 int missing = total - found;
                 if (canHint) {
-                    if (GUILayout.Button($"Hint {hints.Length}/{missing}")) APHandler.TryHintHotDog();
+                    if (GUILayout.Button($"Hint {hints.Length}/{missing}", GUILayout.Width(hintEntryInfoWidth))) APHandler.TryHintHotDog();
                 }
-                else if (hints.Length > 0) GUILayout.Label($"HINTED {hints.Length}/{missing}");
-                else GUILayout.Label("MISSING");
+                else if (hints.Length > 0) GUILayout.Label($"HINTED {hints.Length}/{missing}", GUILayout.Width(hintEntryInfoWidth));
+                else GUILayout.Label("MISSING", GUILayout.Width(hintEntryInfoWidth));
                 GUILayout.EndHorizontal();
             }
         }
@@ -421,13 +423,13 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 GUILayout.Label($"Track unlocks remaining: {unfound.Length}");
                 foreach (Track track in unfound) {
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label(track.Name);
+                    GUILayout.Label(track.Name, GUILayout.Width(hintEntryWidth));
                     Hint theHint = APHandler.APReceivedHints.FirstOrDefault(hint => hint.ReceivingPlayer == APHandler.APSlot && hint.ItemId == track.ID);
-                    if (theHint != null && theHint.ReceivingPlayer ==  APHandler.APSlot && theHint.ItemId == track.ID) GUILayout.Label("HINTED");
+                    if (theHint != null && theHint.ReceivingPlayer == APHandler.APSlot && theHint.ItemId == track.ID) GUILayout.Label("HINTED", GUILayout.Width(hintEntryInfoWidth));
                     else if (canHint) {
-                        if (GUILayout.Button("Hint")) APHandler.TryHintTrack(track);
+                        if (GUILayout.Button("Hint", GUILayout.Width(hintEntryInfoWidth))) APHandler.TryHintTrack(track);
                     }
-                    else GUILayout.Label("MISSING");
+                    else GUILayout.Label("MISSING", GUILayout.Width(hintEntryInfoWidth));
                     GUILayout.EndHorizontal();
                 }
             }
@@ -440,7 +442,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         
         // list of all received hints
         GUILayout.BeginVertical();
-        hintScroll2 = GUILayout.BeginScrollView(hintScroll2, false, true);
+        hintScroll2 = GUILayout.BeginScrollView(hintScroll2, false, true, GUILayout.Width(340));
         if (APHandler.APReceivedHints.Length == 0) GUILayout.Label("No hints!");
         foreach (Hint hint in APHandler.APReceivedHints) {
             GUILayout.Label(APHandler.FormatFullHint(hint));
