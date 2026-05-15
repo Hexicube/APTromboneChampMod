@@ -111,9 +111,12 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                             if (reqHotDogs > 0) {
                                 int foundHotDogs = APHandler.APFoundItems.Count(id => id == 1004L);
                                 if (foundHotDogs < reqHotDogs) {
-                                    // Hint[] hotDogHints = APHandler.GetHotDogHints();
-                                    // TODO: how to show this large list of hints?
                                     str.Append($"\nHot dogs: {foundHotDogs}/{reqHotDogs}");
+                                    
+                                    // TODO: show these hints somewhere else, text is far too small otherwise (especially with many hot dogs)
+                                    //Hint[] hotDogHints = APHandler.GetHotDogHints();
+                                    //foreach (Hint hint in hotDogHints)
+                                    //    str.Append($"\nHot Dog: {APHandler.FormatItemHint(hint)}");
                                 }
                             }
                         }
@@ -132,9 +135,11 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                             int req = track.Value.Difficulty - APHandler.WorldSettings.MinDiff;
                             if (req > 0) {
                                 int found = APHandler.APFoundItems.Count(id => id == 1011L);
-                                if (found < req)
-                                    // TODO: list of difficulty unlock hints
+                                if (found < req) {
                                     str.Append($"\nDifficulty unlocks: {found}/{req}");
+                                    foreach (Hint hint in hints.DifficultyUnlocks)
+                                        str.Append($"\nProgressive Difficulty: {APHandler.FormatItemHint(hint)}");
+                                }
                             }
                         }
                     }
