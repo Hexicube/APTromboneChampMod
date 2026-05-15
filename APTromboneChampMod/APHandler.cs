@@ -4,6 +4,8 @@ using System.Linq;
 using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
+using Archipelago.MultiClient.Net.MessageLog.Messages;
+using Archipelago.MultiClient.Net.MessageLog.Parts;
 using Archipelago.MultiClient.Net.Models;
 using BaboonAPI.Hooks;
 using Newtonsoft.Json.Linq;
@@ -223,8 +225,8 @@ public static class APHandler {
         if (!WorldSettings.TrackGating) return;
         if (!CanHint()) return;
         if (APReceivedHints.Any(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == track.ID)) return;
-        string loc = APSession.Locations.GetLocationNameFromId(track.ID);
-        if (loc is not null) APSession.Say($"!hint {loc}");
+        string item = APSession.Items.GetItemName(track.ID);
+        if (item is not null) APSession.Say($"!hint {item}");
     }
 
     public static void TryHintDifficulty(int diff) {
@@ -240,8 +242,8 @@ public static class APHandler {
             int found = APReceivedHints.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1011L);
             if (found >= total) return;
         }
-        string loc = APSession.Locations.GetLocationNameFromId(1010L + diff);
-        if (loc is not null) APSession.Say($"!hint {loc}");
+        string item = APSession.Items.GetItemName(1010L + diff);
+        if (item is not null) APSession.Say($"!hint {item}");
     }
 
     public static void TryHintRankReduction() {
@@ -251,8 +253,8 @@ public static class APHandler {
         if (total == 0) return;
         int found = APReceivedHints.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1001L);
         if (found >= total) return;
-        string loc = APSession.Locations.GetLocationNameFromId(1001L);
-        if (loc is not null) APSession.Say($"!hint {loc}");
+        string item = APSession.Items.GetItemName(1001L);
+        if (item is not null) APSession.Say($"!hint {item}");
     }
 
     public static void TryHintHotDog() {
@@ -264,8 +266,8 @@ public static class APHandler {
         total -= found;
         found = APReceivedHints.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1004L);
         if (found >= total) return;
-        string loc = APSession.Locations.GetLocationNameFromId(1004L);
-        if (loc is not null) APSession.Say($"!hint {loc}");
+        string item = APSession.Items.GetItemName(1004L);
+        if (item is not null) APSession.Say($"!hint {item}");
     }
 
     public static void ConnectToAP(string host, int port, string slot, string pass) {
@@ -287,12 +289,25 @@ public static class APHandler {
                 OnReceivedItems(items);
             };
             APSession.Locations.CheckedLocationsUpdated += locs => {
-                APSentLocations.AddRange(locs);
+                foreach (long loc in locs) {
+                    if (!APSentLocations.Contains(loc)) {
+                        APSentLocations.Add(loc);
+                        foreach (Hint hint in APReceivedHints) {
+                            if (hint.FindingPlayer == APSlot && hint.LocationId == loc) {
+                                // remove the hint if it exists for this specific location
+                                APReceivedHints = APReceivedHints.Where(it =>
+                                    it.FindingPlayer != APSlot ||
+                                    it.LocationId    != loc
+                                ).ToArray();
+                                break;
+                            }
+                        }
+                    }
+                }
                 OnTrackAvailabilityChanged();
             };
             APSession.Hints.TrackHints(hints => {
                 APReceivedHints = hints.Where(hint => !hint.Found).ToArray();
-                ArchipelagoPlugin.Logger.LogInfo($"Number of hints: {APReceivedHints.Length}");
                 OnHintsChanged();
             });
             APSession.Socket.SocketClosed += reason => {
@@ -300,6 +315,75 @@ public static class APHandler {
                 APSlot = -1;
                 APSession = null;
                 OnWorldSettingsChanged();
+            };
+            APSession.MessageLog.OnMessageReceived += message => {
+                if (message is HintItemSendLogMessage hintMsg) {
+                    if (hintMsg.IsRelatedToActivePlayer) {
+                        // need to handle it because TrackHints does not
+                        int  sender   = hintMsg.Sender.Slot;
+                        int  receiver = hintMsg.Receiver.Slot;
+                        bool found    = hintMsg.IsFound;
+                        long item     = hintMsg.Item.ItemId;
+                        long location = hintMsg.Item.LocationId;
+                        bool existing = false;
+                        foreach (Hint hint in APReceivedHints) {
+                            if (hint.FindingPlayer == sender && hint.ReceivingPlayer == receiver && hint.LocationId == location) {
+                                existing = true;
+                                // remove the hint if the item was found
+                                if (found) {
+                                    APReceivedHints = APReceivedHints.Where(it =>
+                                        it.FindingPlayer   != sender   ||
+                                        it.ReceivingPlayer != receiver ||
+                                        it.LocationId      != location
+                                    ).ToArray();
+                                }
+
+                                OnHintsChanged();
+                                break;
+                            }
+                        }
+
+                        if (!found && !existing) {
+                            // add the hint if item was not found and the item is new
+                            APReceivedHints = [
+                                ..APReceivedHints,
+                                new Hint {
+                                    Entrance        = "",
+                                    FindingPlayer   = sender,
+                                    Found           = false,
+                                    ItemFlags       = hintMsg.Item.Flags,
+                                    ItemId          = item,
+                                    LocationId      = location,
+                                    ReceivingPlayer = receiver,
+                                    Status          = (hintMsg.Item.Flags & ItemFlags.Trap) != 0 ? HintStatus.Avoid : HintStatus.Priority
+                                }
+                            ];
+                            OnHintsChanged();
+                        }
+                    }
+                    return; // for some reason this message type is also ItemSendLogMessage???
+                }
+
+                if (message is ItemSendLogMessage itemMsg) {
+                    if (itemMsg.IsRelatedToActivePlayer) {
+                        // need to handle this to remove hints for own items/locations
+                        int  sender   = itemMsg.Sender.Slot;
+                        int  receiver = itemMsg.Receiver.Slot;
+                        long location = itemMsg.Item.LocationId;
+                        foreach (Hint hint in APReceivedHints) {
+                            if (hint.FindingPlayer == sender && hint.ReceivingPlayer == receiver && hint.LocationId == location) {
+                                // remove the hint
+                                APReceivedHints = APReceivedHints.Where(it =>
+                                    it.FindingPlayer   != sender   ||
+                                    it.ReceivingPlayer != receiver ||
+                                    it.LocationId      != location
+                                ).ToArray();
+                                OnHintsChanged();
+                                break;
+                            }
+                        }
+                    }
+                }
             };
             // TODO: add event handlers before connecting
             LoginResult result = APSession.TryConnectAndLogin( // TODO: async version
@@ -356,6 +440,7 @@ public static class APHandler {
             APSession.Hints.GetHintsAsync().ContinueWith(task => {
                 if (!task.IsCompletedSuccessfully) return;
                 APReceivedHints = task.Result.Where(hint => !hint.Found).ToArray();
+                OnHintsChanged();
             });
         }
         catch (Exception e) {
@@ -376,10 +461,11 @@ public static class APHandler {
         }
         if (refreshHints) {
             // there are multiple of these specific items, this tends to break hint tracking
-            APReceivedHints = APSession.Hints.GetHints().Where(hint => !hint.Found).ToArray();
-            OnHintsChanged();
+            // message handling should deal with this
+            //APReceivedHints = APSession.Hints.GetHints().Where(hint => !hint.Found).ToArray();
+            //OnHintsChanged();
         }
-        else if (updateHints) OnHintsChanged(); // specific difficulty unlocks only
+        if (updateHints) OnHintsChanged(); // specific difficulty unlocks only
         if (updateTracks) OnTrackAvailabilityChanged();
     }
 
