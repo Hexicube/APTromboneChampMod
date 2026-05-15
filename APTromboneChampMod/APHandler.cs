@@ -276,7 +276,7 @@ public static class APHandler {
         OnWorldSettingsChanged();
         try {
             APSession = ArchipelagoSessionFactory.CreateSession(host, port);
-            APSession.Items.ItemReceived += (helper) => {
+            APSession.Items.ItemReceived += helper => {
                 List<long> items = [];
                 ItemInfo item;
                 while (helper.Any()) {
@@ -286,17 +286,16 @@ public static class APHandler {
                 }
                 OnReceivedItems(items);
             };
-            APSession.Locations.CheckedLocationsUpdated += (helper) => {
-                APSentLocations.Clear();
-                APSentLocations.AddRange(helper);
+            APSession.Locations.CheckedLocationsUpdated += locs => {
+                APSentLocations.AddRange(locs);
                 OnTrackAvailabilityChanged();
             };
-            APSession.Hints.TrackHints((hints) => {
+            APSession.Hints.TrackHints(hints => {
                 APReceivedHints = hints.Where(hint => !hint.Found).ToArray();
                 ArchipelagoPlugin.Logger.LogInfo($"Number of hints: {APReceivedHints.Length}");
                 OnHintsChanged();
             });
-            APSession.Socket.SocketClosed += (reason) => {
+            APSession.Socket.SocketClosed += reason => {
                 ArchipelagoPlugin.Logger.LogInfo($"Socket closed: {reason}");
                 APSlot = -1;
                 APSession = null;
