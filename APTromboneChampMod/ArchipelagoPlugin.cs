@@ -265,8 +265,12 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         if (GUILayout.Button("Close")) curGUI = -1;
     }
 
+    public static bool SendChatToLog = false;
+
     void ShowTrackerWindow() {
         GUILayout.Label("Connected to AP server.");
+        
+        SendChatToLog = GUILayout.Toggle(SendChatToLog, "Send Chat to Log");
         
         GUILayout.Space(10);
 

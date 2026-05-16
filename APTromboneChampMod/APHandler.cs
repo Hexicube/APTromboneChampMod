@@ -371,6 +371,7 @@ public static class APHandler {
                             ];
                             OnHintsChanged();
                         }
+                        if (ArchipelagoPlugin.SendChatToLog) ArchipelagoPlugin.Logger.LogInfo(message.ToString());
                     }
                     return; // for some reason this message type is also ItemSendLogMessage???
                 }
@@ -393,8 +394,12 @@ public static class APHandler {
                                 break;
                             }
                         }
+                        if (ArchipelagoPlugin.SendChatToLog) ArchipelagoPlugin.Logger.LogInfo(message.ToString());
                     }
+                    return;
                 }
+                
+                if (ArchipelagoPlugin.SendChatToLog) ArchipelagoPlugin.Logger.LogInfo(message.ToString());
             };
             LoginResult result = APSession.TryConnectAndLogin( // TODO: async version
                 "Trombone Champ", slot,
