@@ -81,18 +81,7 @@ public static class APHandler {
         long[] IDs = beaten ? [track.ID, track.ID + 1000L] : [track.ID];
         APSession.Locations.CompleteLocationChecksAsync(IDs);
         if (!beaten) return;
-        // goal logic
-        if (WorldSettings.GoalTracks == 0) {
-            if (GoalTrack.HasValue) {
-                if (track.ID == GoalTrack.Value.ID) APSession.SetGoalAchieved();
-            }
-            else ArchipelagoPlugin.Logger.LogWarning("Goal tracks is 0 and no goal track is set!");
-        }
-        else {
-            int numBeaten = APSentLocations.Count(id => id > 1000L);
-            if (!APSentLocations.Contains(track.ID + 1000L)) numBeaten++;
-            if (numBeaten >= WorldSettings.GoalTracks) APSession.SetGoalAchieved();
-        }
+        if (HasGoaled(track.ID)) APSession.SetGoalAchieved();
     }
 
     public static bool CanHint() {
@@ -278,6 +267,20 @@ public static class APHandler {
         if (item is not null) APSession.Say($"!hint {item}");
     }
 
+    public static bool HasGoaled(long lastTrackBeaten = -1) {
+        if (WorldSettings.GoalTracks == 0) {
+            if (GoalTrack.HasValue) {
+                if (lastTrackBeaten == GoalTrack.Value.ID || APSentLocations.Contains(GoalTrack.Value.ID + 1000L)) return true;
+            }
+            else ArchipelagoPlugin.Logger.LogWarning("Goal tracks is 0 and no goal track is set!");
+            return false;
+        }
+        
+        int numBeaten = APSentLocations.Count(id => id > 1000L);
+        if (lastTrackBeaten != -1 && !APSentLocations.Contains(lastTrackBeaten + 1000L)) numBeaten++;
+        return numBeaten >= WorldSettings.GoalTracks;
+    }
+
     public static void ConnectToAP(string host, int port, string slot, string pass) {
         ArchipelagoPlugin.Logger.LogInfo($"Connecting to {host}:{port}");
         APSession?.Socket.DisconnectAsync();
@@ -363,7 +366,7 @@ public static class APHandler {
                                     ItemId          = item,
                                     LocationId      = location,
                                     ReceivingPlayer = receiver,
-                                    Status          = (hintMsg.Item.Flags & ItemFlags.Trap) != 0 ? HintStatus.Avoid : HintStatus.Priority
+                                    Status          = (hintMsg.Item.Flags & ItemFlags.Trap) != 0 ? HintStatus.Avoid : (hintMsg.Item.Flags == 0 ? HintStatus.NoPriority : HintStatus.Priority)
                                 }
                             ];
                             OnHintsChanged();
@@ -551,7 +554,7 @@ public static class APHandler {
         // check if the current collection is an AP one
         global::TrackCollection current = GlobalVariables.all_track_collections[GlobalVariables.chosen_collection_index];
         BaseTromboneCollection  thisCollection = null;
-        if (current._unique_id == "AP") thisCollection = new TrackCollection();
+        if (current._unique_id == "AP") thisCollection = new TrackCollectionAllAP();
         if (current._unique_id == "AP_checks") thisCollection = new TrackCollectionAvailWithChecksOnly();
 
         if (thisCollection != null) {

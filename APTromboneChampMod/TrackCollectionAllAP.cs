@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace APTromboneChampMod;
 
-public class TrackCollection() : BaseTromboneCollection("AP", "Archipelago", "All tracks required for Archipelago") {
+public class TrackCollectionAllAP() : BaseTromboneCollection("AP", "Archipelago", "All tracks required for Archipelago") {
     public override IEnumerable<TromboneTrack> BuildTrackList() {
         int yielded = 0;
         ArrayList unseen = new ArrayList(APHandler.FilteredTracks);
@@ -82,13 +82,51 @@ public class TrackCollectionAvailWithChecksOnly() : BaseTromboneCollection("AP_c
     }
 
     public override Coroutines.YieldTask<FSharpResult<Sprite, string>> LoadSprite() {
-        return Coroutines.sync(FuncConvert.FromFunc(() => FSharpResult<Sprite, string>.NewOk(Base64Images.ArchipelagoCollection)));
+        return Coroutines.sync(FuncConvert.FromFunc(() => FSharpResult<Sprite, string>.NewOk(Base64Images.ArchipelagoCollectionFiltered)));
+    }
+}
+
+public class TrackCollectionLockedOnly() : BaseTromboneCollection("AP_locked", "Archipelago Locked", "Tracks that aren't yet available") {
+    public override IEnumerable<TromboneTrack> BuildTrackList() {
+        int yielded = 0;
+        ArrayList unseen = new ArrayList(APHandler.FilteredTracks);
+        List<string> unknownTracks = [];
+        foreach (TromboneTrack track in TrackLookup.allTracks()) {
+            Track? match = null;
+            foreach (Track trackDef in unseen) {
+                if (trackDef.Name == track.trackname_short) {
+                    match = trackDef;
+                    break;
+                }
+            }
+            if (match != null) {
+                unseen.Remove(match.Value);
+                if (!APHandler.IsTrackAvailable(match.Value)) {
+                    yielded++;
+                    yield return track;
+                }
+            }
+            else unknownTracks.Add(track.trackname_short);
+        }
+
+        if (unseen.Count > 0) {
+            // TODO: notify player
+            foreach (string missed in unseen) ArchipelagoPlugin.Logger.LogInfo($"Missed track: {missed}");
+            foreach (string unknown in unknownTracks) ArchipelagoPlugin.Logger.LogInfo($"Unknown track: {unknown}");
+        }
+
+        if (yielded == 0) yield return TrackLookup.allTracks().First(track => track.trackname_short == "Warm-Up"); // prevents issues
+    }
+
+    public override Coroutines.YieldTask<FSharpResult<Sprite, string>> LoadSprite() {
+        return Coroutines.sync(FuncConvert.FromFunc(() => FSharpResult<Sprite, string>.NewOk(Base64Images.ArchipelagoCollectionLocked)));
     }
 }
 
 public class TrackCollectionListener : TrackCollectionRegistrationEvent.Listener {
     public IEnumerable<TromboneCollection> OnRegisterCollections() {
-        yield return new TrackCollection();
+        yield return new TrackCollectionAllAP();
         yield return new TrackCollectionAvailWithChecksOnly();
+        yield return new TrackCollectionLockedOnly();
     }
 }

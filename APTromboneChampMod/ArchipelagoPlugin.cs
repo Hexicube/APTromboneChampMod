@@ -77,6 +77,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     class PreventPlayingTrack {
         static bool Prefix(LevelSelectController __instance) {
             if (APHandler.APSlot == -1) return true;
+            if (APHandler.HasGoaled()) return true;
             
             Track? track = APHandler.FindTrack(__instance.alltrackslist[__instance.songindex].trackname_short);
             if (!track.HasValue) return false;
@@ -90,20 +91,30 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         static void Postfix(LevelSelectController __instance) {
             // detect AP collections and look for edge-case of single track being Warm-Up
             global::TrackCollection current = GlobalVariables.all_track_collections[GlobalVariables.chosen_collection_index];
-            if (current._unique_id is "AP" or "AP_checks") {
+            if (APHandler.APSlot != -1 && APHandler.HasGoaled()) {
+                __instance.songdesctext.text = "Goaled!\nMaybe play for fun?";
+                __instance.playbtn.enabled = true;
+                __instance.playbtn.gameObject.SetActive(true);
+                return;
+            }
+            
+            if (current._unique_id is "AP" or "AP_checks" or "AP_locked") {
                 if (current._trackcount == 1 && current.all_tracks[0].trackname_short == "Warm-Up") {
                     bool isFallback = false;
-                    if (current._unique_id == "AP" && APHandler.FilteredTracks.All(track => track.Name != "Warm-Up")) isFallback = true;
+                    if (current._unique_id == "AP"        && APHandler. FilteredTracks.All(track => track.Name != "Warm-Up")) isFallback = true;
                     if (current._unique_id == "AP_checks" && APHandler.AvailableTracks.All(track => track.Name != "Warm-Up")) isFallback = true;
+                    if (current._unique_id == "AP_locked" && APHandler. FilteredTracks.All(track => track.Name != "Warm-Up" || APHandler.IsTrackAvailable(track))) isFallback = true;
                     if (isFallback) {
-                        if (current._unique_id == "AP") {
-                            if (APHandler.APSlot == -1) __instance.songdesctext.text = "Not connected to AP!\nPress F1 to open connection manager.";
-                            else __instance.songdesctext.text = "AP song list is empty!\nReport this with your config included.";
-                        }
+                        if (APHandler.APSlot == -1) __instance.songdesctext.text = "Not connected to AP!\nPress F1 to open connection manager.";
                         else {
-                            if (APHandler.APSlot == -1) __instance.songdesctext.text = "Not connected to AP!\nPress F1 to open connection manager.";
-                            else __instance.songdesctext.text = "No songs left to play.\nMaybe hint something?";
+                            if (current._unique_id == "AP")
+                                __instance.songdesctext.text = "AP song list is empty!\nReport this with your config included.";
+                            if (current._unique_id == "AP_checks")
+                                __instance.songdesctext.text = "No songs left to play.\nMaybe press F2 to hint something?";
+                            if (current._unique_id == "AP_locked")
+                                __instance.songdesctext.text = "All songs unlocked.\nGo play them!";
                         }
+
                         __instance.playbtn.enabled = false;
                         __instance.playbtn.gameObject.SetActive(false);
                         return;
@@ -258,7 +269,8 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         Track[] tracks = APTracks.GetTrackList(APHandler.WorldSettings).ToArray();
         
         string goal;
-        if (APHandler.WorldSettings.GoalTracks == 0) goal = $"Goal track: {APHandler.WorldSettings.GoalTrack}";
+        if (APHandler.HasGoaled()) goal = "Goaled!";
+        else if (APHandler.WorldSettings.GoalTracks == 0) goal = $"Goal track: {APHandler.WorldSettings.GoalTrack}";
         else {
             int numBeaten = tracks.Count(track => APHandler.APSentLocations.Contains(track.ID + 1000L));
             goal = $"Beat tracks: {numBeaten}/{APHandler.WorldSettings.GoalTrack}";
