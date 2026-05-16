@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
@@ -297,20 +298,24 @@ public static class APHandler {
                     items.Add(item.ItemId);
                     helper.DequeueItem();
                 }
+                // safe to do this with no lock, the function handles it
                 OnReceivedItems(items);
             };
             APSession.Locations.CheckedLocationsUpdated += locs => {
-                foreach (long loc in locs) {
-                    if (!APSentLocations.Contains(loc)) {
-                        APSentLocations.Add(loc);
-                        foreach (Hint hint in APReceivedHints) {
-                            if (hint.FindingPlayer == APSlot && hint.LocationId == loc) {
-                                // remove the hint if it exists for this specific location
-                                APReceivedHints = APReceivedHints.Where(it =>
-                                    it.FindingPlayer != APSlot ||
-                                    it.LocationId    != loc
-                                ).ToArray();
-                                break;
+                // only add locations with the lock, to prevent issues updating collections
+                lock (APSentLocations) {
+                    foreach (long loc in locs) {
+                        if (!APSentLocations.Contains(loc)) {
+                            APSentLocations.Add(loc);
+                            foreach (Hint hint in APReceivedHints) {
+                                if (hint.FindingPlayer == APSlot && hint.LocationId == loc) {
+                                    // remove the hint if it exists for this specific location
+                                    APReceivedHints = APReceivedHints.Where(it =>
+                                        it.FindingPlayer != APSlot ||
+                                        it.LocationId    != loc
+                                    ).ToArray();
+                                    break;
+                                }
                             }
                         }
                     }
@@ -497,37 +502,63 @@ public static class APHandler {
     ];
 
     private static List<string> UnseenFacts = [];
-    
+
+    private static List<long> ItemQueue = [];
+    private static object ItemQueueProcessLock = new();
     public static void OnReceivedItems(List<long> items) {
-        APFoundItems.AddRange(items);
+        // safely add items to a queue
+        lock(ItemQueue) { ItemQueue.AddRange(items); }
+        
+        // try and take the processing lock (10ms timeout), return otherwise
+        bool locked = Monitor.TryEnter(ItemQueueProcessLock, 10);
+        if (!locked) return;
+
         bool updateTracks = false;
         bool updateHints = false;
         bool refreshHints = false;
-        foreach (long item in items) {
-            if ((item > 0L && item < 1000L) || item is 1001L or 1004L || item > 1010L) updateTracks = true;
-            if (item is 1001L or 1004L or 1011L) refreshHints = true;
-            if (item > 1011L) updateHints = true;
-            
-            if (item == 1003L && (DateTimeOffset.Now.ToUnixTimeMilliseconds() - LastFunFact) > 1000L) { // rate limit to 1/s
-                LastFunFact = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-
-                if (UnseenFacts.Count == 0) {
-                    UnseenFacts.AddRange(FunFacts);
-                    UnseenFacts.Shuffle();
+        while (true) {
+            lock (APFoundItems) {
+                lock (ItemQueue) {
+                    APFoundItems.AddRange(ItemQueue);
+                    ItemQueue.Clear();
                 }
+            }
+
+            foreach (long item in items) {
+                if ((item > 0L && item < 1000L) || item is 1001L or 1004L || item > 1010L) updateTracks = true;
+                if (item is 1001L or 1004L or 1011L) refreshHints = true;
+                if (item > 1011L) updateHints = true;
                 
-                APSession.Say($"FUN FACT: {UnseenFacts[0]}");
-                UnseenFacts.RemoveAt(0);
+                if (item == 1003L && (DateTimeOffset.Now.ToUnixTimeMilliseconds() - LastFunFact) > 1000L) { // rate limit to 1/s
+                    LastFunFact = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
+                    if (UnseenFacts.Count == 0) {
+                        UnseenFacts.AddRange(FunFacts);
+                        UnseenFacts.Shuffle();
+                    }
+                    
+                    APSession.Say($"FUN FACT: {UnseenFacts[0]}");
+                    UnseenFacts.RemoveAt(0);
+                }
+            }
+            if (refreshHints) {
+                // there are multiple of these specific items, this tends to break hint tracking
+                // message handling should deal with this
+                //APReceivedHints = APSession.Hints.GetHints().Where(hint => !hint.Found).ToArray();
+                //OnHintsChanged();
+            }
+
+            lock (ItemQueue) {
+                if (ItemQueue.Count == 0) {
+                    // give up this lock BEFORE giving up ItemQueue, so the next caller starts processing
+                    Monitor.Exit(ItemQueueProcessLock);
+                    break;
+                }
             }
         }
-        if (refreshHints) {
-            // there are multiple of these specific items, this tends to break hint tracking
-            // message handling should deal with this
-            //APReceivedHints = APSession.Hints.GetHints().Where(hint => !hint.Found).ToArray();
-            //OnHintsChanged();
-        }
-        if (updateHints) OnHintsChanged(); // specific difficulty unlocks only
+        
         if (updateTracks) OnTrackAvailabilityChanged();
+        else if (updateHints) OnHintsChanged(); // specific difficulty unlocks only
     }
 
     public static void OnHintsChanged() {
@@ -549,54 +580,69 @@ public static class APHandler {
         if (ArchipelagoPlugin.Instance.curGUI == 0 && APSlot != -1) ArchipelagoPlugin.Instance.curGUI = 1;
         if (ArchipelagoPlugin.Instance.curGUI == 1 && APSlot == -1) ArchipelagoPlugin.Instance.curGUI = 0;
     }
-
+    
+    private static object TrackUpdateLock = new();
     public static void OnTrackAvailabilityChanged() {
-        // called when receiving items that might change what tracks are playable
-        AvailableTracks = FilteredTracks.Where(IsTrackAvailable).ToArray();
+        // make absolutely sure that nothing will change during updating
+        lock (TrackUpdateLock) {
+            lock (APSentLocations) {
+                lock (APFoundItems) {
+                    // called when receiving items that might change what tracks are playable
+                    AvailableTracks = FilteredTracks.Where(IsTrackAvailable).ToArray();
 
-        if (GlobalVariables.chosen_collection_index < 0 || GlobalVariables.chosen_collection_index >= GlobalVariables.all_track_collections.Count) return; // never loaded collections
-            
-        // check if the current collection is an AP one
-        global::TrackCollection current = GlobalVariables.all_track_collections[GlobalVariables.chosen_collection_index];
-        BaseTromboneCollection  thisCollection = null;
-        if (current._unique_id == "AP") thisCollection = new TrackCollectionAllAP();
-        if (current._unique_id == "AP_checks") thisCollection = new TrackCollectionAvailWithChecksOnly();
+                    if (GlobalVariables.chosen_collection_index < 0 || GlobalVariables.chosen_collection_index >= GlobalVariables.all_track_collections.Count) return; // never loaded collections
+                        
+                    // check if the current collection is an AP one
+                    global::TrackCollection current = GlobalVariables.all_track_collections[GlobalVariables.chosen_collection_index];
+                    BaseTromboneCollection  thisCollection = null;
+                    if (current._unique_id == "AP") thisCollection = new TrackCollectionAllAP();
+                    if (current._unique_id == "AP_checks") thisCollection = new TrackCollectionAvailWithChecksOnly();
 
-        if (thisCollection != null) {
-            // rebuild the collection manually so the track list actually updates
-            List<TromboneTrack> tracks = thisCollection.BuildTrackList().ToList();
-            global::TrackCollection allCollection = GlobalVariables.all_track_collections.First(coll => coll._unique_id == "all"); // from base game, contains every track
-            current.all_tracks = tracks.Select(track => {
-                return allCollection.all_tracks.First(data => data.trackname_short == track.trackname_short);
-            }).ToList();
-            current._trackcount = tracks.Count;
-            
-            LevelSelectController controller = UnityEngine.Object.FindObjectOfType<LevelSelectController>();
-            if (controller) {
-                // get the currently selected song in the list
-                string name = controller.alltrackslist[controller.songindex].trackname_short;
-                
-                // rebuild the controller's collection, with skipped sort, then do the sort with no animation
-                controller.selectNewCollection(true);
-                controller.sortTracks(GlobalVariables.sortmode, false);
+                    if (thisCollection != null) {
+                        // rebuild the collection manually so the track list actually updates
+                        List<TromboneTrack> tracks = thisCollection.BuildTrackList().ToList();
+                        global::TrackCollection allCollection = GlobalVariables.all_track_collections.First(coll => coll._unique_id == "all"); // from base game, contains every track
+                        current.all_tracks = tracks.Select(track => {
+                            return allCollection.all_tracks.First(data => data.trackname_short == track.trackname_short);
+                        }).ToList();
+                        current._trackcount = tracks.Count;
+                        
+                        LevelSelectController controller = UnityEngine.Object.FindObjectOfType<LevelSelectController>();
+                        if (controller) {
+                            // get the currently selected song in the list
+                            string name = controller.alltrackslist[controller.songindex].trackname_short;
+                            
+                            // rebuild the controller's collection, with skipped sort, then do the sort with no animation
+                            controller.selectNewCollection(true);
+                            controller.sortTracks(GlobalVariables.sortmode, false);
 
-                // try and select the track that was previously selected
-                int idx = -1;
-                for (int a = 0; a < controller.alltrackslist.Count; a++) {
-                    if (controller.alltrackslist[a].trackname_short == name) {
-                        idx = a;
-                        break;
+                            // try and select the track that was previously selected
+                            int idx = -1;
+                            for (int a = 0; a < controller.alltrackslist.Count; a++) {
+                                if (controller.alltrackslist[a].trackname_short == name) {
+                                    idx = a;
+                                    break;
+                                }
+                            }
+
+                            if (idx != -1 && idx != controller.songindex) {
+                                controller.songindex = idx;
+                                controller.populateSongNames(false); // repopulate names because index was changed
+                            }
+                            if (idx == -1) {
+                                if (controller.songindex == -1 || controller.songindex >= tracks.Count) controller.songindex = 0;
+                                controller.populateSongNames(true); // brief animations and triggers track preview to update
+                            }
+                        }
                     }
-                }
 
-                if (idx != -1 && idx != controller.songindex) {
-                    controller.songindex = idx;
-                    controller.populateSongNames(false); // repopulate names because index was changed
+                    // wait for this to finish
+                    var iter = TrackReloader.ReloadAll(null).ForEach(_ => {});
+                    while (iter.MoveNext()) {}
+                    
+                    OnHintsChanged();
                 }
-                if (idx == -1) controller.populateSongNames(true); // brief animations and triggers track preview to update
             }
         }
-
-        TrackReloader.ReloadAll(null);
     }
 }
