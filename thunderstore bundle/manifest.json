@@ -1,0 +1,9 @@
+{
+	"name": "Archipelago",
+	"version_number": "0.1.0",
+	"website_url": "https://github.com/Hexicube/APTromboneChampMod",
+	"description": "Archipelago support for Trombone Champ",
+	"dependencies": [
+		"BaboonAPI"
+	]
+}
