@@ -4,6 +4,6 @@
 	"website_url": "https://github.com/Hexicube/APTromboneChampMod",
 	"description": "Archipelago support for Trombone Champ",
 	"dependencies": [
-		"BaboonAPI"
+		"TromboneChamps-BaboonAPI-2.10.5"
 	]
 }
