@@ -45,6 +45,11 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     [HarmonyPatch(typeof(PointSceneController), nameof(PointSceneController.Awake))]
     class ScoreScreenChecker {
         static void Postfix() {
+            if (APHandler.APSlot == -1) {
+                Logger.LogInfo("AP not connected, not sending.");
+                return;
+            }
+            
             // scores should be available at this stage
             // 135% = wall break, 100% = S, 80% = A, 60% = B, 40% = C, 20% = D
             float scorePct = GlobalVariables.gameplay_scoreperc;
@@ -58,8 +63,8 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
             Track track = APHandler.AvailableTracks.FirstOrDefault(track => track.Name == GlobalVariables.chosen_track_data.trackname_short);
             if (track.Name == GlobalVariables.chosen_track_data.trackname_short) { // make sure it exists
                 Logger.LogInfo($"Track end screen: {GlobalVariables.chosen_track_data.trackname_short}");
-                Logger.LogInfo($"Score: {scorePct}");
-                Logger.LogInfo($"Rating: {achievedRating}");
+                Logger.LogInfo($" Score: {scorePct:P2}");
+                Logger.LogInfo($"Rating: {new []{"F", "D", "C", "B", "A", "S", "Wall (S)", "Perfect (S)"}[achievedRating+2]}");
                 Logger.LogInfo($"Beaten: {beaten}");
                 
                 // precaution: prevent submitting a track you dont have
@@ -70,6 +75,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 
                 APHandler.SendTrack(track, beaten);
             }
+            else Logger.LogInfo("Track was not in the list of AP tracks.");
         }
     }
 
@@ -254,9 +260,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         password = GUILayout.PasswordField(password, '*', GUILayout.Width(200));
 
         if (GUILayout.Button("Connect Archipelago", GUILayout.Height(30)) && int.TryParse(port.Trim(), out int portInt)) 
-        {
             APHandler.ConnectToAP(uri, portInt, slotname, password);
-        }
 
         if (GUILayout.Button("Close")) curGUI = -1;
     }
