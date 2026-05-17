@@ -280,10 +280,10 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 List<int> difficulties = [];
                 List<int> locked = [];
                 if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
-                    int numUnlocked = APHandler.APFoundItems.Count(id => id == 1011L);
+                    int maxDiff = APHandler.WorldSettings.MinDiff + APHandler.APFoundItems.Count(id => id == 1011L);
                     for (int a = APHandler.WorldSettings.MinDiff + 1; a <= APHandler.WorldSettings.MaxDiff; a++) {
                         difficulties.Add(a);
-                        if (numUnlocked <= a) locked.Add(a);
+                        if (maxDiff < a) locked.Add(a);
                     }
                 }
                 if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
