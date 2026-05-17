@@ -251,9 +251,13 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
             }
 
             if (APHandler.GoalTrack != null && APHandler.IsTrackAvailable(APHandler.GoalTrack.Value)) {
-                // if the goal track is available, indicate that and early exit
-                // TODO
-                return;
+                int rank = APHandler.APFoundItems.Count(id => id == 1001L);
+                int req  = APHandler.WorldSettings.InitialRating - APHandler.WorldSettings.GoalRating;
+                if (rank < req) {
+                    // if the goal track is available, indicate that and early exit
+                    // TODO
+                    return;
+                }
             }
             
             if (APHandler.WorldSettings.HotDogs > 0) {
