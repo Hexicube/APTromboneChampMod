@@ -54,9 +54,6 @@ public static class APHandler {
         if (track.Name == WorldSettings.GoalTrack) {
             int hotDogs = APFoundItems.Count(id => id == 1004L);
             if (hotDogs < WorldSettings.HotDogs) return false;
-            int rank = APFoundItems.Count(id => id == 1001L);
-            int req = WorldSettings.InitialRating - WorldSettings.GoalRating;
-            if (rank < req) return false;
         }
         return true;
     }
