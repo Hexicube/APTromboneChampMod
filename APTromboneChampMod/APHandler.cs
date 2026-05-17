@@ -613,6 +613,7 @@ public static class APHandler {
                             string name = controller.alltrackslist[controller.songindex].trackname_short;
                             
                             // rebuild the controller's collection, with skipped sort, then do the sort with no animation
+                            controller.songindex = 0; // make sure the index is valid first
                             controller.selectNewCollection(true);
                             controller.sortTracks(GlobalVariables.sortmode, false);
 
@@ -625,13 +626,15 @@ public static class APHandler {
                                 }
                             }
 
-                            if (idx != -1 && idx != controller.songindex) {
+                            if (idx != -1) {
+                                // only repopulate names
                                 controller.songindex = idx;
-                                controller.populateSongNames(false); // repopulate names because index was changed
+                                controller.populateSongNames(false);
                             }
-                            if (idx == -1) {
-                                if (controller.songindex == -1 || controller.songindex >= tracks.Count) controller.songindex = 0;
-                                controller.populateSongNames(true); // brief animations and triggers track preview to update
+                            else {
+                                // brief animations and triggers track preview to update
+                                controller.songindex = 0;
+                                controller.populateSongNames(true);
                             }
                         }
                     }
@@ -639,8 +642,6 @@ public static class APHandler {
                     // wait for this to finish
                     var iter = TrackReloader.ReloadAll(null).ForEach(_ => {});
                     while (iter.MoveNext()) {}
-                    
-                    OnHintsChanged();
                 }
             }
         }
