@@ -288,6 +288,9 @@ public static class APHandler {
         APSession?.Socket.DisconnectAsync();
         APSession = null;
         APSlot = -1;
+        APReceivedHints = [];
+        APFoundItems.Clear();
+        APSentLocations.Clear();
         OnWorldSettingsChanged();
         try {
             APSession = ArchipelagoSessionFactory.CreateSession(host, port);
