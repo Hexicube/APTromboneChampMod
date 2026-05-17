@@ -311,7 +311,7 @@ public static class APHandler {
                             UnseenFacts.RemoveAt(0);
                         }
                     }
-                    else if (item.ItemId == 1002L) ; // Nothing
+                    else if (item.ItemId == 1002L) {} // Nothing
                     else if (item.ItemId is 1005L or 1006L or 1007L or 1008L or 1009L) { // traps
                         // dont send in first 10s after connecting to avoid doubled traps from disconnection
                         if (DateTimeOffset.Now.ToUnixTimeMilliseconds() - ConnectTime > 10000L) {

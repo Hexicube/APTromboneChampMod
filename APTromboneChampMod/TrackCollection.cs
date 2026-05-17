@@ -45,7 +45,7 @@ public class TrackCollectionAllAP() : BaseTromboneCollection("AP", "Archipelago"
     }
 
     public override Coroutines.YieldTask<FSharpResult<Sprite, string>> LoadSprite() {
-        return Coroutines.sync(FuncConvert.FromFunc(() => FSharpResult<Sprite, string>.NewOk(Base64Images.ArchipelagoCollection)));
+        return Coroutines.sync(FuncConvert.FromFunc(() => FSharpResult<Sprite, string>.NewOk(ImageHandler.ArchipelagoCollection)));
     }
 
     public bool HasNoTracks() {
@@ -98,7 +98,7 @@ public class TrackCollectionAvailWithChecksOnly() : BaseTromboneCollection("AP_c
     }
 
     public override Coroutines.YieldTask<FSharpResult<Sprite, string>> LoadSprite() {
-        return Coroutines.sync(FuncConvert.FromFunc(() => FSharpResult<Sprite, string>.NewOk(Base64Images.ArchipelagoCollectionFiltered)));
+        return Coroutines.sync(FuncConvert.FromFunc(() => FSharpResult<Sprite, string>.NewOk(ImageHandler.ArchipelagoCollectionFiltered)));
     }
 
     public bool HasNoTracks() {
@@ -153,7 +153,7 @@ public class TrackCollectionLockedOnly() : BaseTromboneCollection("AP_locked", "
     }
 
     public override Coroutines.YieldTask<FSharpResult<Sprite, string>> LoadSprite() {
-        return Coroutines.sync(FuncConvert.FromFunc(() => FSharpResult<Sprite, string>.NewOk(Base64Images.ArchipelagoCollectionLocked)));
+        return Coroutines.sync(FuncConvert.FromFunc(() => FSharpResult<Sprite, string>.NewOk(ImageHandler.ArchipelagoCollectionLocked)));
     }
 
     public bool HasNoTracks() {

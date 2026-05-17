@@ -39,6 +39,8 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     }
 
     private void TryInitialize() {
+        ImageHandler.LoadTextures();
+        
         TrackCollectionRegistrationEvent.EVENT.Register(new TrackCollectionListener());
         
         _harmony.PatchAll();
@@ -235,10 +237,12 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     private static GUIStyle textStyle = new GUIStyle() { fontSize = 17 };
     void OnGUI() {
         if (curGUI != -1) windowRect = GUI.Window(curGUI, windowRect, WindowHandler, "Archipelago Menu");
+
+        if (!ImageHandler.TexturesLoaded) return;
         
         // show that the AP mod loaded ok
         int height = Screen.height;
-        GUI.DrawTexture(new Rect(10, height - 50, 40, 40), APHandler.APSlot == -1 ? Base64Images.ArchipelagoGrey.texture : Base64Images.Archipelago.texture);
+        GUI.DrawTexture(new Rect(10, height - 50, 40, 40), APHandler.APSlot == -1 ? ImageHandler.ArchipelagoGrey : ImageHandler.Archipelago);
 
         // show some tracker information
         if (APHandler.APSlot != -1) {
@@ -263,14 +267,14 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
             if (APHandler.WorldSettings.HotDogs > 0) {
                 // if hot dogs are required, indicate if enough have been found
                 bool hasEnough = APHandler.APFoundItems.Count(id => id == 1004L) >= APHandler.WorldSettings.HotDogs;
-                GUI.DrawTexture(new Rect(x, height - 50, 40, 40), hasEnough ? Base64Images.HotDog.texture : Base64Images.HotDogGrey.texture);
+                GUI.DrawTexture(new Rect(x, height - 50, 40, 40), hasEnough ? ImageHandler.HotDog : ImageHandler.HotDogGrey);
                 x += 50;
             }
 
             if (APHandler.WorldSettings.InitialRating > APHandler.WorldSettings.GoalRating) {
                 // if there are rating reduction items, indicate if they were all found and what the current rank requirement is
                 bool hasEnough = APHandler.APFoundItems.Count(id => id == 1001L) >= APHandler.WorldSettings.InitialRating - APHandler.WorldSettings.GoalRating;
-                GUI.DrawTexture(new Rect(x, height - 50, 40, 40), hasEnough ? Base64Images.RankIndicator.texture : Base64Images.RankIndicatorGrey.texture);
+                GUI.DrawTexture(new Rect(x, height - 50, 40, 40), hasEnough ? ImageHandler.RankIndicator : ImageHandler.RankIndicatorGrey);
                 string rank = new[] {"C", "B", "A", "S"}[APHandler.GetRequiredRating()];
                 GUI.color = Color.black;
                 Vector2 size = textStyle.CalcSize(new GUIContent(rank));
@@ -297,7 +301,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                     }
                 }
                 foreach (int diff in difficulties) {
-                    GUI.DrawTexture(new Rect(x, height - 50, 40, 40), locked.Contains(diff) ? Base64Images.DifficultyIndicatorGrey.texture : Base64Images.DifficultyIndicator.texture);
+                    GUI.DrawTexture(new Rect(x, height - 50, 40, 40), locked.Contains(diff) ? ImageHandler.DifficultyIndicatorGrey : ImageHandler.DifficultyIndicator);
                     GUI.color = Color.black;
                     string str = diff.ToString();
                     Vector2 size = textStyle.CalcSize(new GUIContent(str));
