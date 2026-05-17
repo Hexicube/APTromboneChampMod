@@ -191,6 +191,13 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         }
     }
 
+    [HarmonyPatch(typeof(GameController), nameof(GameController.Update))]
+    class TrapPatch {
+        static void Postfix(GameController __instance) {
+            APTrapController.ControllerUpdate(__instance);
+        }
+    }
+
     void Update() {
         if (Input.GetKeyDown(KeyCode.F1)) {
             if (curGUI is -1 or > 1) {
@@ -206,6 +213,15 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 else curGUI = 2;
             }
             else curGUI = -1;
+        }
+        
+        // test traps
+        if (Input.GetKeyDown(KeyCode.F3)) {
+            APTrapController.AddTrap(APTrapController.TrapType.FlipControls);
+            APTrapController.AddTrap(APTrapController.TrapType.SilenceTrack);
+            APTrapController.AddTrap(APTrapController.TrapType.SilenceTrombone);
+            APTrapController.AddTrap(APTrapController.TrapType.HideNotes);
+            APTrapController.AddTrap(APTrapController.TrapType.NoBreath);
         }
     }
 
