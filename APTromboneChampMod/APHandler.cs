@@ -282,6 +282,7 @@ public static class APHandler {
         return numBeaten >= WorldSettings.GoalTracks;
     }
 
+    public static long ConnectTime;
     public static void ConnectToAP(string host, int port, string slot, string pass) {
         ArchipelagoPlugin.Logger.LogInfo($"Connecting to {host}:{port}");
         APSession?.Socket.DisconnectAsync();
@@ -295,7 +296,45 @@ public static class APHandler {
                 ItemInfo item;
                 while (helper.Any()) {
                     item = helper.PeekItem();
-                    items.Add(item.ItemId);
+                    // handle traps/filler immediately to avoid clogging item list
+                
+                    if (item.ItemId == 1003L) { // Fun Fact, rate limit to 1/s
+                        if (DateTimeOffset.Now.ToUnixTimeMilliseconds() - LastFunFact > 1000L) {
+                            LastFunFact = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
+                            if (UnseenFacts.Count == 0) {
+                                UnseenFacts.AddRange(FunFacts);
+                                UnseenFacts.Shuffle();
+                            }
+
+                            APSession.Say($"FUN FACT: {UnseenFacts[0]}");
+                            UnseenFacts.RemoveAt(0);
+                        }
+                    }
+                    else if (item.ItemId == 1002L) ; // Nothing
+                    else if (item.ItemId is 1005L or 1006L or 1007L or 1008L or 1009L) { // traps
+                        // dont send in first 10s after connecting to avoid doubled traps from disconnection
+                        if (DateTimeOffset.Now.ToUnixTimeMilliseconds() - ConnectTime > 10000L) {
+                            switch (item.ItemId) {
+                                case 1005L:
+                                    APTrapController.AddTrap(APTrapController.TrapType.FlipControls);
+                                    break;
+                                case 1006L:
+                                    APTrapController.AddTrap(APTrapController.TrapType.SilenceTrack);
+                                    break;
+                                case 1007L:
+                                    APTrapController.AddTrap(APTrapController.TrapType.SilenceTrombone);
+                                    break;
+                                case 1008L:
+                                    APTrapController.AddTrap(APTrapController.TrapType.HideNotes);
+                                    break;
+                                case 1009L:
+                                    APTrapController.AddTrap(APTrapController.TrapType.NoBreath);
+                                    break;
+                            }
+                        }
+                    }
+                    else items.Add(item.ItemId);
                     helper.DequeueItem();
                 }
                 // safe to do this with no lock, the function handles it
@@ -406,12 +445,13 @@ public static class APHandler {
                 
                 if (ArchipelagoPlugin.SendChatToLog) ArchipelagoPlugin.Logger.LogInfo(message.ToString());
             };
+            ConnectTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
             LoginResult result = APSession.TryConnectAndLogin( // TODO: async version
                 "Trombone Champ", slot,
                 ItemsHandlingFlags.AllItems,
                 APVersion, [], null, pass, true
             );
-            LastFunFact = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+            ConnectTime = LastFunFact = DateTimeOffset.Now.ToUnixTimeMilliseconds();
             if (!result.Successful)
             {
                 // TODO: show errors
@@ -528,18 +568,6 @@ public static class APHandler {
                 if ((item > 0L && item < 1000L) || item is 1001L or 1004L || item > 1010L) updateTracks = true;
                 if (item is 1001L or 1004L or 1011L) refreshHints = true;
                 if (item > 1011L) updateHints = true;
-                
-                if (item == 1003L && (DateTimeOffset.Now.ToUnixTimeMilliseconds() - LastFunFact) > 1000L) { // rate limit to 1/s
-                    LastFunFact = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-
-                    if (UnseenFacts.Count == 0) {
-                        UnseenFacts.AddRange(FunFacts);
-                        UnseenFacts.Shuffle();
-                    }
-                    
-                    APSession.Say($"FUN FACT: {UnseenFacts[0]}");
-                    UnseenFacts.RemoveAt(0);
-                }
             }
             if (refreshHints) {
                 // there are multiple of these specific items, this tends to break hint tracking

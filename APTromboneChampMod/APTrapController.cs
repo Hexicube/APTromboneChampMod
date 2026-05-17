@@ -26,7 +26,6 @@ public static class APTrapController {
             ArchipelagoPlugin.Logger.LogWarning("Trap controller was reset with active traps!");
             TrapQueue.Insert(0, CurTrap);
         }
-        else ArchipelagoPlugin.Logger.LogInfo("Trap controller was reset.");
         CurTrap = TrapType.NONE;
     }
 
