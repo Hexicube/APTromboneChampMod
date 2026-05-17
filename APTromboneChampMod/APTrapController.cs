@@ -20,10 +20,22 @@ public static class APTrapController {
         TrapQueue.Add(t);
     }
 
+    public static void ResetState() {
+        TrapEndTime = 0f;
+        if (CurTrap != TrapType.NONE) {
+            ArchipelagoPlugin.Logger.LogWarning("Trap controller was reset with active traps!");
+            TrapQueue.Insert(0, CurTrap);
+        }
+        else ArchipelagoPlugin.Logger.LogInfo("Trap controller was reset.");
+        CurTrap = TrapType.NONE;
+    }
+
     private static TrapType CurTrap = TrapType.NONE;
     private static float TrapEndTime;
     private static float CorrectTrackVolume;
     public static void ControllerUpdate(GameController controller) {
+        if (!controller.musictrack || !controller.musictrack.clip) return; // track ended
+        
         float trackTime = (float)controller.musictrack.timeSamples / (float)controller.musictrack.clip.frequency;
         
         // try to end an existing trap

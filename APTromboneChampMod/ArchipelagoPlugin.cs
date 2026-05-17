@@ -191,6 +191,13 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         }
     }
 
+    [HarmonyPatch(typeof(GameController), nameof(GameController.Awake))]
+    class TrapReset {
+        static void Postfix() {
+            APTrapController.ResetState();
+        }
+    }
+
     [HarmonyPatch(typeof(GameController), nameof(GameController.Update))]
     class TrapPatch {
         static void Postfix(GameController __instance) {
