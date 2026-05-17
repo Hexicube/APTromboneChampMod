@@ -223,15 +223,6 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
             }
             else curGUI = -1;
         }
-        
-        // test traps
-        if (Input.GetKeyDown(KeyCode.F3)) {
-            APTrapController.AddTrap(APTrapController.TrapType.FlipControls);
-            APTrapController.AddTrap(APTrapController.TrapType.SilenceTrack);
-            APTrapController.AddTrap(APTrapController.TrapType.SilenceTrombone);
-            APTrapController.AddTrap(APTrapController.TrapType.HideNotes);
-            APTrapController.AddTrap(APTrapController.TrapType.NoBreath);
-        }
     }
 
     private static GUIStyle textStyle = new GUIStyle() { fontSize = 17 };
@@ -256,8 +247,8 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
             if (APHandler.GoalTrack != null && APHandler.IsTrackAvailable(APHandler.GoalTrack.Value)) {
                 int rank = APHandler.APFoundItems.Count(id => id == 1001L);
-                int req  = APHandler.WorldSettings.InitialRating - APHandler.WorldSettings.GoalRating;
-                if (rank < req) {
+                int req = APHandler.WorldSettings.InitialRating - APHandler.WorldSettings.GoalRating;
+                if (rank >= req) {
                     // if the goal track is available, indicate that and early exit
                     // TODO
                     return;
