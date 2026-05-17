@@ -594,11 +594,8 @@ public static class APHandler {
                         
                     // check if the current collection is an AP one
                     global::TrackCollection current = GlobalVariables.all_track_collections[GlobalVariables.chosen_collection_index];
-                    BaseTromboneCollection  thisCollection = null;
-                    if (current._unique_id == "AP") thisCollection = new TrackCollectionAllAP();
-                    if (current._unique_id == "AP_checks") thisCollection = new TrackCollectionAvailWithChecksOnly();
 
-                    if (thisCollection != null) {
+                    if (TrackCollectionListener.COLLECTIONS.TryGetValue(current._unique_id, out BaseTromboneCollection thisCollection)) {
                         // rebuild the collection manually so the track list actually updates
                         List<TromboneTrack> tracks = thisCollection.BuildTrackList().ToList();
                         global::TrackCollection allCollection = GlobalVariables.all_track_collections.First(coll => coll._unique_id == "all"); // from base game, contains every track

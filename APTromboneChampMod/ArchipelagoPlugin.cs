@@ -4,6 +4,7 @@ using System.Text;
 using Archipelago.MultiClient.Net.Models;
 using BaboonAPI.Hooks.Initializer;
 using BaboonAPI.Hooks.Tracks;
+using BaboonAPI.Hooks.Tracks.Collections;
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
@@ -104,27 +105,13 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 return;
             }
             
-            if (current._unique_id is "AP" or "AP_checks" or "AP_locked") {
-                if (current._trackcount == 1 && current.all_tracks[0].trackname_short == "Warm-Up") {
-                    bool isFallback = false;
-                    if (current._unique_id == "AP"        && APHandler. FilteredTracks.All(track => track.Name != "Warm-Up")) isFallback = true;
-                    if (current._unique_id == "AP_checks" && APHandler.AvailableTracks.All(track => track.Name != "Warm-Up")) isFallback = true;
-                    if (current._unique_id == "AP_locked" && APHandler. FilteredTracks.All(track => track.Name != "Warm-Up" || APHandler.IsTrackAvailable(track))) isFallback = true;
-                    if (isFallback) {
-                        if (APHandler.APSlot == -1) __instance.songdesctext.text = "Not connected to AP!\nPress F1 to open connection manager.";
-                        else {
-                            if (current._unique_id == "AP")
-                                __instance.songdesctext.text = "AP song list is empty!\nReport this with your config included.";
-                            if (current._unique_id == "AP_checks")
-                                __instance.songdesctext.text = "No songs left to play.\nMaybe press F2 to hint something?";
-                            if (current._unique_id == "AP_locked")
-                                __instance.songdesctext.text = "All songs unlocked.\nGo play them!";
-                        }
-
-                        __instance.playbtn.enabled = false;
-                        __instance.playbtn.gameObject.SetActive(false);
-                        return;
-                    }
+            if (TrackCollectionListener.COLLECTIONS.TryGetValue(current._unique_id, out BaseTromboneCollection thisCollection)) {
+                APCollection apColl = (APCollection)thisCollection;
+                if (apColl.HasNoTracks()) {
+                    __instance.songdesctext.text = APHandler.APSlot == -1 ? "Not connected to AP!\nPress F1 to open connection manager." : apColl.GetNoTrackString();
+                    __instance.playbtn.enabled = false;
+                    __instance.playbtn.gameObject.SetActive(false);
+                    return;
                 }
             }
             
