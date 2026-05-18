@@ -37,6 +37,4 @@ What it does not currently do:
 - Add somewhere for chat messages
   - Add errors to this chat
 - Make it possible to hint directly from the track list rather than needing a UI
-- Show current difficulty unlocks and hot dog progress somewhere on-screen similar to the AP logo
 - Notify the player in some way when the goal track becomes available
-- Add traps (blind/deaf, out of breath, etc.)
