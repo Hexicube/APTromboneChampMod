@@ -6,14 +6,11 @@ using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
-using Archipelago.MultiClient.Net.MessageLog.Parts;
 using Archipelago.MultiClient.Net.Models;
 using BaboonAPI.Hooks;
 using BaboonAPI.Hooks.Tracks;
 using BaboonAPI.Hooks.Tracks.Collections;
 using Newtonsoft.Json.Linq;
-using UnityEngine;
-using UnityEngine.Yoga;
 
 namespace APTromboneChampMod;
 
@@ -312,7 +309,7 @@ public static class APHandler {
                         }
                     }
                     else if (item.ItemId == 1002L) {} // Nothing
-                    else if (item.ItemId is 1005L or 1006L or 1007L or 1008L or 1009L) { // traps
+                    else if (item.ItemId is 1005L or 1006L or 1007L or 1008L or 1009L) { // old trap IDs
                         // dont send in first 10s after connecting to avoid doubled traps from disconnection
                         if (DateTimeOffset.Now.ToUnixTimeMilliseconds() - ConnectTime > 10000L) {
                             switch (item.ItemId) {
@@ -334,7 +331,15 @@ public static class APHandler {
                             }
                         }
                     }
-                    else items.Add(item.ItemId);
+                    else {
+                        APTrapController.TrapType trap = APTrapController.TrapType.GetTrap(item.ItemId);
+                        if (trap != null) {
+                            // dont send in first 10s after connecting to avoid doubled traps from disconnection
+                            if (DateTimeOffset.Now.ToUnixTimeMilliseconds() - ConnectTime > 10000L)
+                                APTrapController.AddTrap(trap);
+                        }
+                        else items.Add(item.ItemId);
+                    }
                     helper.DequeueItem();
                 }
                 // safe to do this with no lock, the function handles it
