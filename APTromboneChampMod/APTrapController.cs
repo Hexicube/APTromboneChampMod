@@ -73,11 +73,20 @@ public class APTrapController {
                     controller.breathglow.anchoredPosition3D = new Vector3(-380f, 0f, 0f);
                     controller.outofbreath = true;
                     controller.noteplaying = false;
-                    controller.setPuppetShake(shake: false);
-                    controller.setPuppetBreath(hasbreath: true);
+                    controller.setPuppetShake(false);
+                    controller.setPuppetBreath(true);
                     controller.stopNote();
                 }
             }
+
+            override public void EndTrap(GameController controller) {
+                controller.breathcounter = 0f;
+                controller.outofbreath = false;
+                controller.sfxrefs.outofbreath.Stop();
+                controller.setPuppetBreath(false);
+            }
+
+            override public float TrapDuration() => 2f;
         }
 
         public class TrapWarbleTrombone() : TrapType(1206L) {
@@ -90,18 +99,22 @@ public class APTrapController {
         }
 
         public class TrapWarpSpeed() : TrapType(1207L) {
+            private static readonly AnimationCurve SpeedCurve = new AnimationCurve(
+                new Keyframe(0f, 1f),
+                new Keyframe(0.1f, 1f),
+                new Keyframe(0.3f, 0.9f),
+                new Keyframe(0.35f, 0.9f),
+                new Keyframe(0.65f, 1.25f),
+                new Keyframe(0.7f, 1.25f),
+                new Keyframe(0.9f, 1f),
+                new Keyframe(1f, 1f)
+            );
+
             override public void ContinueTrap(GameController controller) {
                 float trackTime = (float)controller.musictrack.timeSamples / (float)controller.musictrack.clip.frequency;
                 float trapProgress = (trackTime - TrapStartTime) / (TrapEndTime - TrapStartTime);
-                float warp = Mathf.Sin(trapProgress * Mathf.PI * 2) * .2f + .9f;
 
-                // smooth out start/end
-                float edgeDist = trapProgress * 2f;
-                if (edgeDist > 1f) edgeDist = 2f - edgeDist;
-                if (edgeDist < .5f) {
-                    float intensity = edgeDist / .5f;
-                    warp = warp * intensity + (1 - intensity);
-                }
+                float warp = SpeedCurve.Evaluate(trapProgress);
 
                 if (GlobalVariables.turbomode) warp *= 2f;
                 controller.musictrack.pitch = warp;
@@ -113,6 +126,8 @@ public class APTrapController {
                 controller.musictrack.pitch = warp;
                 controller.smooth_scrolling_move_mult = warp;
             }
+
+            override public float TrapDuration() => 10f;
         }
 
         public static readonly TrapType FlipControls = new TrapFlipControls();
@@ -123,7 +138,7 @@ public class APTrapController {
 
         public static readonly TrapType[] Traps = [
             FlipControls, SilenceTrack, SilenceTrombone, HideNotes, NoBreath,
-            new TrapWarbleTrombone()
+            new TrapWarbleTrombone(), new TrapWarpSpeed()
         ];
 
         public readonly long ID = ID;
