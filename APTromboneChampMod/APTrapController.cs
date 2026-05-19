@@ -55,17 +55,6 @@ public class APTrapController {
             }
         }
 
-        public class TrapWarbleTrack() : TrapType(1205L) {
-            // TODO: implement
-        }
-
-        public class TrapWarbleTrombone() : TrapType(1206L) {
-            override public void ContinueTrap(GameController controller) {
-                // TODO: get trap progress
-                controller.currentnotesound.pitch += 1f;
-            }
-        }
-
         public class TrapNoBreath() : TrapType(1205L) {
             override public void StartTrap(GameController controller) {
                 controller.breathcounter = 1f;
@@ -79,6 +68,15 @@ public class APTrapController {
                     controller.setPuppetBreath(hasbreath: true);
                     controller.stopNote();
                 }
+            }
+        }
+
+        public class TrapWarbleTrombone() : TrapType(1206L) {
+            private const float NUM_CYCLES = 5;
+            override public void ContinueTrap(GameController controller) {
+                float trackTime = (float)controller.musictrack.timeSamples / (float)controller.musictrack.clip.frequency;
+                float trapProgress = (trackTime - TrapStartTime) / (TrapEndTime - TrapStartTime);
+                controller.currentnotesound.pitch *= Mathf.Sin(trapProgress * NUM_CYCLES * Mathf.PI * 2) * .2f + .9f;
             }
         }
 
@@ -116,7 +114,7 @@ public class APTrapController {
     }
 
     private static TrapType CurTrap;
-    private static float TrapEndTime;
+    private static float TrapStartTime, TrapEndTime;
     public static void ControllerUpdate(GameController controller) {
         if (!controller.musictrack || !controller.musictrack.clip) return; // track ended
         
@@ -139,6 +137,7 @@ public class APTrapController {
             CurTrap = TrapQueue[0];
             CurTrap.StartTrap(controller);
             TrapQueue.RemoveAt(0);
+            TrapStartTime = trackTime;
             TrapEndTime = expectedEnd;
         }
 
