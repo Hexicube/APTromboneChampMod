@@ -18,9 +18,11 @@ public class APTrapController {
                 controller.gameplay_settings.mouse_controldirection = style;
             }
 
-            public override void EndTrap(GameController controller) {
+            override public void EndTrap(GameController controller) {
                 controller.gameplay_settings.mouse_controldirection = GlobalVariables.mousecontrolmode;
             }
+
+            override public float TrapDuration() => 8f;
         }
 
         public class TrapSilenceTrack() : TrapType(1202L) {
@@ -31,7 +33,14 @@ public class APTrapController {
             }
 
             override public void ContinueTrap(GameController controller) {
-                controller.musictrack.volume = 0f;
+                float trackTime = (float)controller.musictrack.timeSamples / (float)controller.musictrack.clip.frequency;
+                float trapProgress = (trackTime - TrapStartTime) / (TrapEndTime - TrapStartTime);
+                float edgeDist = trapProgress * 2f;
+                if (edgeDist > 1f) edgeDist = 2f - edgeDist;
+
+                float vol = 0f;
+                if (edgeDist < .25f) vol = 1f - edgeDist / .25f;
+                controller.musictrack.volume = vol;
             }
 
             override public void EndTrap(GameController controller) {
@@ -80,6 +89,32 @@ public class APTrapController {
             }
         }
 
+        public class TrapWarpSpeed() : TrapType(1207L) {
+            override public void ContinueTrap(GameController controller) {
+                float trackTime = (float)controller.musictrack.timeSamples / (float)controller.musictrack.clip.frequency;
+                float trapProgress = (trackTime - TrapStartTime) / (TrapEndTime - TrapStartTime);
+                float warp = Mathf.Sin(trapProgress * Mathf.PI * 2) * .2f + .9f;
+
+                // smooth out start/end
+                float edgeDist = trapProgress * 2f;
+                if (edgeDist > 1f) edgeDist = 2f - edgeDist;
+                if (edgeDist < .5f) {
+                    float intensity = edgeDist / .5f;
+                    warp = warp * intensity + (1 - intensity);
+                }
+
+                if (GlobalVariables.turbomode) warp *= 2f;
+                controller.musictrack.pitch = warp;
+                controller.smooth_scrolling_move_mult = warp;
+            }
+
+            override public void EndTrap(GameController controller) {
+                float warp = GlobalVariables.turbomode ? 2 : 1;
+                controller.musictrack.pitch = warp;
+                controller.smooth_scrolling_move_mult = warp;
+            }
+        }
+
         public static readonly TrapType FlipControls = new TrapFlipControls();
         public static readonly TrapType SilenceTrack = new TrapSilenceTrack();
         public static readonly TrapType SilenceTrombone = new TrapSilenceTrombone();
@@ -93,6 +128,7 @@ public class APTrapController {
 
         public readonly long ID = ID;
 
+        virtual public float TrapDuration() => 5f;
         virtual public void StartTrap(GameController controller) {}
         virtual public void ContinueTrap(GameController controller) {}
         virtual public void EndTrap(GameController controller) {}
@@ -132,8 +168,8 @@ public class APTrapController {
             if (TrapQueue.Count == 0) return;
             float earliestAllowed = TrapEndTime + 3f;
             if (trackTime < earliestAllowed) return;
-            float expectedEnd = trackTime + 5f;
-            if (expectedEnd > controller.levelendtime) return;
+            float expectedEnd = trackTime + TrapQueue[0].TrapDuration();
+            if (expectedEnd > controller.levelendtime - 3f) return;
             CurTrap = TrapQueue[0];
             CurTrap.StartTrap(controller);
             TrapQueue.RemoveAt(0);
