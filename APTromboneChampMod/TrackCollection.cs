@@ -22,7 +22,7 @@ public class TrackCollectionAllAP() : BaseTromboneCollection("AP", "Archipelago"
         foreach (TromboneTrack track in TrackLookup.allTracks()) {
             Track? match = null;
             foreach (Track trackDef in unseen) {
-                if (trackDef.Name == track.trackname_short) {
+                if (trackDef.Name.ToLower() == track.trackname_short.ToLower()) {
                     match = trackDef;
                     break;
                 }
@@ -30,6 +30,7 @@ public class TrackCollectionAllAP() : BaseTromboneCollection("AP", "Archipelago"
             if (match != null) {
                 unseen.Remove(match);
                 yielded++;
+                ArchipelagoPlugin.Logger.LogInfo(track.trackname_short);
                 yield return track;
             }
             else unknownTracks.Add(track.trackname_short);
@@ -37,7 +38,7 @@ public class TrackCollectionAllAP() : BaseTromboneCollection("AP", "Archipelago"
 
         if (unseen.Count > 0) {
             // TODO: notify player
-            foreach (string missed in unseen) ArchipelagoPlugin.Logger.LogInfo($"Missed track: {missed}");
+            foreach (Track missed in unseen) ArchipelagoPlugin.Logger.LogInfo($"Missed track: {missed.Name}");
             foreach (string unknown in unknownTracks) ArchipelagoPlugin.Logger.LogInfo($"Unknown track: {unknown}");
         }
 
@@ -51,7 +52,7 @@ public class TrackCollectionAllAP() : BaseTromboneCollection("AP", "Archipelago"
     public bool HasNoTracks() {
         foreach (TromboneTrack track in TrackLookup.allTracks()) {
             foreach (Track trackDef in APHandler.FilteredTracks) {
-                if (trackDef.Name == track.trackname_short) return false;
+                if (trackDef.Name.ToLower() == track.trackname_short.ToLower()) return false;
             }
         }
         return true;
@@ -68,7 +69,7 @@ public class TrackCollectionAvailWithChecksOnly() : BaseTromboneCollection("AP_c
         foreach (TromboneTrack track in TrackLookup.allTracks()) {
             Track? match = null;
             foreach (Track trackDef in unseen) {
-                if (trackDef.Name == track.trackname_short) {
+                if (trackDef.Name.ToLower() == track.trackname_short.ToLower()) {
                     match = trackDef;
                     break;
                 }
@@ -90,7 +91,7 @@ public class TrackCollectionAvailWithChecksOnly() : BaseTromboneCollection("AP_c
 
         if (unseen.Count > 0) {
             // TODO: notify player
-            foreach (string missed in unseen) ArchipelagoPlugin.Logger.LogInfo($"Missed track: {missed}");
+            foreach (Track missed in unseen) ArchipelagoPlugin.Logger.LogInfo($"Missed track: {missed.Name}");
             foreach (string unknown in unknownTracks) ArchipelagoPlugin.Logger.LogInfo($"Unknown track: {unknown}");
         }
 
@@ -104,7 +105,7 @@ public class TrackCollectionAvailWithChecksOnly() : BaseTromboneCollection("AP_c
     public bool HasNoTracks() {
         foreach (TromboneTrack track in TrackLookup.allTracks()) {
             foreach (Track trackDef in APHandler.FilteredTracks) {
-                if (trackDef.Name == track.trackname_short) {
+                if (trackDef.Name.ToLower() == track.trackname_short.ToLower()) {
                     if (APHandler.IsTrackAvailable(trackDef)) {
                         if (
                             !APHandler.APSentLocations.Contains(trackDef.ID) ||
@@ -128,7 +129,7 @@ public class TrackCollectionLockedOnly() : BaseTromboneCollection("AP_locked", "
         foreach (TromboneTrack track in TrackLookup.allTracks()) {
             Track? match = null;
             foreach (Track trackDef in unseen) {
-                if (trackDef.Name == track.trackname_short) {
+                if (trackDef.Name.ToLower() == track.trackname_short.ToLower()) {
                     match = trackDef;
                     break;
                 }
@@ -145,7 +146,7 @@ public class TrackCollectionLockedOnly() : BaseTromboneCollection("AP_locked", "
 
         if (unseen.Count > 0) {
             // TODO: notify player
-            foreach (string missed in unseen) ArchipelagoPlugin.Logger.LogInfo($"Missed track: {missed}");
+            foreach (Track missed in unseen) ArchipelagoPlugin.Logger.LogInfo($"Missed track: {missed.Name}");
             foreach (string unknown in unknownTracks) ArchipelagoPlugin.Logger.LogInfo($"Unknown track: {unknown}");
         }
 
@@ -159,7 +160,7 @@ public class TrackCollectionLockedOnly() : BaseTromboneCollection("AP_locked", "
     public bool HasNoTracks() {
         foreach (TromboneTrack track in TrackLookup.allTracks()) {
             foreach (Track trackDef in APHandler.FilteredTracks) {
-                if (trackDef.Name == track.trackname_short) {
+                if (trackDef.Name.ToLower() == track.trackname_short.ToLower()) {
                     if (!APHandler.IsTrackAvailable(trackDef)) return false;
                 }
             }

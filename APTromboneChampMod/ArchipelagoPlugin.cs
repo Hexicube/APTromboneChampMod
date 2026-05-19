@@ -288,7 +288,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
                     for (int a = APHandler.WorldSettings.MinDiff + 1; a <= APHandler.WorldSettings.MaxDiff; a++) {
                         difficulties.Add(a);
-                        if (!APHandler.APFoundItems.Contains(difficulties[a] + 1010L)) locked.Add(a);
+                        if (!APHandler.APFoundItems.Contains(a + 1010L)) locked.Add(a);
                     }
                 }
                 foreach (int diff in difficulties) {
