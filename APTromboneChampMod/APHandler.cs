@@ -643,8 +643,8 @@ public static class APHandler {
                             string name = controller.alltrackslist[controller.songindex].trackname_short;
                             
                             // rebuild the controller's collection, with skipped sort, then do the sort with no animation
-                            controller.songindex = 0; // make sure the index is valid first
                             controller.selectNewCollection(true);
+                            GlobalVariables.levelselect_index = 0; // make sure the index is valid first
                             controller.sortTracks(GlobalVariables.sortmode, false);
 
                             // try and select the track that was previously selected
@@ -659,11 +659,11 @@ public static class APHandler {
                             if (idx != -1) {
                                 // only repopulate names
                                 controller.songindex = idx;
+                                GlobalVariables.levelselect_index = idx;
                                 controller.populateSongNames(false);
                             }
                             else {
                                 // brief animations and triggers track preview to update
-                                controller.songindex = 0;
                                 controller.populateSongNames(true);
                             }
                         }
