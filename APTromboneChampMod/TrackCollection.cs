@@ -30,7 +30,6 @@ public class TrackCollectionAllAP() : BaseTromboneCollection("AP", "Archipelago"
             if (match != null) {
                 unseen.Remove(match);
                 yielded++;
-                ArchipelagoPlugin.Logger.LogInfo(track.trackname_short);
                 yield return track;
             }
             else unknownTracks.Add(track.trackname_short);

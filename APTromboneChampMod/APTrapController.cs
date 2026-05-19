@@ -88,7 +88,7 @@ public class APTrapController {
 
         public static readonly TrapType[] Traps = [
             FlipControls, SilenceTrack, SilenceTrombone, HideNotes, NoBreath,
-            new TrapWarbleTrack(), new TrapWarbleTrombone()
+            new TrapWarbleTrombone()
         ];
 
         public readonly long ID = ID;
