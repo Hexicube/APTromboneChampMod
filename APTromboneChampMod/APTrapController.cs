@@ -50,14 +50,19 @@ public class APTrapController {
         }
 
         public class TrapHideNotes() : TrapType(1204L) {
-            // TODO: only hide the notes, not the pitch indicator
-
-            override public void StartTrap(GameController controller) {
-                controller.zeroxpos = 100000f;
+            override public void ContinueTrap(GameController controller) {
+                controller.noteholderr.anchoredPosition3D = new Vector3(0f, 100f, 0f);
             }
+        }
 
-            override public void EndTrap(GameController controller) {
-                controller.zeroxpos = 60f;
+        public class TrapWarbleTrack() : TrapType(1205L) {
+            // TODO: implement
+        }
+
+        public class TrapWarbleTrombone() : TrapType(1206L) {
+            override public void ContinueTrap(GameController controller) {
+                // TODO: get trap progress
+                controller.currentnotesound.pitch += 1f;
             }
         }
 
@@ -81,10 +86,11 @@ public class APTrapController {
         public static readonly TrapType SilenceTrack = new TrapSilenceTrack();
         public static readonly TrapType SilenceTrombone = new TrapSilenceTrombone();
         public static readonly TrapType HideNotes = new TrapHideNotes();
-        public static readonly TrapType NoBreath        = new(1205L);
+        public static readonly TrapType NoBreath = new TrapNoBreath();
 
         public static readonly TrapType[] Traps = [
-            FlipControls, SilenceTrack, SilenceTrombone, HideNotes, NoBreath
+            FlipControls, SilenceTrack, SilenceTrombone, HideNotes, NoBreath,
+            new TrapWarbleTrack(), new TrapWarbleTrombone()
         ];
 
         public readonly long ID = ID;
