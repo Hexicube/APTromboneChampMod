@@ -5,6 +5,13 @@ using UnityEngine;
 namespace APTromboneChampMod;
 
 public class APTrapController {
+    private static bool WasPlayingNote;
+    private static void SetTrombonePitchModifier(GameController controller, float modifier) {
+        // NOTE: has an effective 1 tick delay to make sure pitch is properly affected, Update function adjusts pitch the same way
+        if (WasPlayingNote) controller.currentnotesound.pitch *= modifier;
+        WasPlayingNote = controller.noteplaying;
+    }
+
     public class TrapType (long ID) {
         public class TrapFlipControls() : TrapType(1201L) {
             override public void StartTrap(GameController controller) {
@@ -91,7 +98,7 @@ public class APTrapController {
             override public void ContinueTrap(GameController controller) {
                 float trackTime = (float)controller.musictrack.timeSamples / (float)controller.musictrack.clip.frequency;
                 float trapProgress = (trackTime - TrapStartTime) / (TrapEndTime - TrapStartTime);
-                controller.currentnotesound.pitch *= Mathf.Sin(trapProgress * NUM_CYCLES * Mathf.PI * 2) * .2f + .9f;
+                SetTrombonePitchModifier(controller, Mathf.Sin(trapProgress * NUM_CYCLES * Mathf.PI * 2) * .2f + .9f);
             }
         }
 
@@ -116,6 +123,9 @@ public class APTrapController {
                 if (GlobalVariables.turbomode) warp *= 2f;
                 controller.musictrack.pitch = warp;
                 controller.smooth_scrolling_move_mult = warp;
+
+                // also warp the trombone so pitch still matches on correct notes
+                SetTrombonePitchModifier(controller, warp);
             }
 
             override public void EndTrap(GameController controller) {
