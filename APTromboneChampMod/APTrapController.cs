@@ -80,10 +80,7 @@ public class APTrapController {
             }
 
             override public void EndTrap(GameController controller) {
-                controller.breathcounter = 0f;
-                controller.outofbreath = false;
-                controller.sfxrefs.outofbreath.Stop();
-                controller.setPuppetBreath(false);
+                controller.breathcounter = 0.001f;
             }
 
             override public float TrapDuration() => 2f;
