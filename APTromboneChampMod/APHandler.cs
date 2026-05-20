@@ -10,6 +10,7 @@ using Archipelago.MultiClient.Net.Models;
 using BaboonAPI.Hooks;
 using BaboonAPI.Hooks.Tracks;
 using BaboonAPI.Hooks.Tracks.Collections;
+using BepInEx.Logging;
 using Newtonsoft.Json.Linq;
 
 namespace APTromboneChampMod;
@@ -343,7 +344,7 @@ public static class APHandler {
                     helper.DequeueItem();
                 }
                 // safe to do this with no lock, the function handles it
-                OnReceivedItems(items);
+                ItemHandler.OnReceivedItems(items);
             };
             APSession.Locations.CheckedLocationsUpdated += locs => {
                 // only add locations with the lock, to prevent issues updating collections
@@ -548,52 +549,6 @@ public static class APHandler {
 
     private static List<string> UnseenFacts = [];
 
-    private static List<long> ItemQueue = [];
-    private static object ItemQueueProcessLock = new();
-    public static void OnReceivedItems(List<long> items) {
-        // safely add items to a queue
-        lock(ItemQueue) { ItemQueue.AddRange(items); }
-        
-        // try and take the processing lock (10ms timeout), return otherwise
-        bool locked = Monitor.TryEnter(ItemQueueProcessLock, 10);
-        if (!locked) return;
-
-        bool updateTracks = false;
-        bool updateHints = false;
-        bool refreshHints = false;
-        while (true) {
-            lock (APFoundItems) {
-                lock (ItemQueue) {
-                    APFoundItems.AddRange(ItemQueue);
-                    ItemQueue.Clear();
-                }
-            }
-
-            foreach (long item in items) {
-                if ((item > 0L && item < 1000L) || item is 1001L or 1004L || item > 1010L) updateTracks = true;
-                if (item is 1001L or 1004L or 1011L) refreshHints = true;
-                if (item > 1011L) updateHints = true;
-            }
-            if (refreshHints) {
-                // there are multiple of these specific items, this tends to break hint tracking
-                // message handling should deal with this
-                //APReceivedHints = APSession.Hints.GetHints().Where(hint => !hint.Found).ToArray();
-                //OnHintsChanged();
-            }
-
-            lock (ItemQueue) {
-                if (ItemQueue.Count == 0) {
-                    // give up this lock BEFORE giving up ItemQueue, so the next caller starts processing
-                    Monitor.Exit(ItemQueueProcessLock);
-                    break;
-                }
-            }
-        }
-        
-        if (updateTracks) OnTrackAvailabilityChanged();
-        else if (updateHints) OnHintsChanged(); // specific difficulty unlocks only
-    }
-
     public static void OnHintsChanged() {
         LevelSelectController controller = UnityEngine.Object.FindObjectOfType<LevelSelectController>();
         if (controller) controller.populateSongNames(false);
@@ -644,7 +599,6 @@ public static class APHandler {
                             
                             // rebuild the controller's collection, with skipped sort, then do the sort with no animation
                             controller.selectNewCollection(true);
-                            GlobalVariables.levelselect_index = 0; // make sure the index is valid first
                             controller.sortTracks(GlobalVariables.sortmode, false);
 
                             // try and select the track that was previously selected

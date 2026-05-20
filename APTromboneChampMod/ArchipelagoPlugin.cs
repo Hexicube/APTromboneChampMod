@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Archipelago.MultiClient.Net.Models;
 using BaboonAPI.Hooks.Initializer;
 using BaboonAPI.Hooks.Tracks;
@@ -98,98 +100,111 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
     [HarmonyPatch(typeof(LevelSelectController), nameof(LevelSelectController.populateSongNames))]
     class ChangeSongDescriptionAndDisablePlay {
-        static void Postfix(LevelSelectController __instance) {
-            // detect AP collections and look for edge-case of single track being Warm-Up
-            global::TrackCollection current = GlobalVariables.all_track_collections[GlobalVariables.chosen_collection_index];
-            if (APHandler.APSlot != -1 && APHandler.HasGoaled()) {
-                __instance.songdesctext.text = "Goaled!\nMaybe play for fun?";
-                __instance.playbtn.enabled = true;
-                __instance.playbtn.gameObject.SetActive(true);
-                return;
-            }
-            
-            if (TrackCollectionListener.COLLECTIONS.TryGetValue(current._unique_id, out BaseTromboneCollection thisCollection)) {
-                APCollection apColl = (APCollection)thisCollection;
-                if (apColl.HasNoTracks()) {
-                    __instance.songdesctext.text = APHandler.APSlot == -1 ? "Not connected to AP!\nPress F1 to open connection manager." : apColl.GetNoTrackString();
-                    __instance.playbtn.enabled = false;
-                    __instance.playbtn.gameObject.SetActive(false);
+        private static object LockObj = new();
+        static void Prefix() {
+            Monitor.Enter(LockObj);
+        }
+        static void Finalizer(LevelSelectController __instance) {
+            try {
+                // detect AP collections and look for edge-case of single track being Warm-Up
+                global::TrackCollection current = GlobalVariables.all_track_collections[GlobalVariables.chosen_collection_index];
+                if (APHandler.APSlot != -1 && APHandler.HasGoaled()) {
+                    __instance.songdesctext.text = "Goaled!\nMaybe play for fun?";
+                    __instance.playbtn.enabled = true;
+                    __instance.playbtn.gameObject.SetActive(true);
+                    Monitor.Exit(LockObj);
                     return;
                 }
-            }
-            
-            bool canPlay = false;
-            if (APHandler.APSlot == -1) canPlay = true;
-            else {
-                Track? track = APHandler.FindTrack(__instance.alltrackslist[__instance.songindex].trackname_short);
-                if (track.HasValue) {
-                    TrackHints hints = APHandler.GetTrackHints(track.Value);
-                    
-                    bool hasPlay = APHandler.APSentLocations.Contains(track.Value.ID);
-                    bool hasBeat = APHandler.APSentLocations.Contains(track.Value.ID + 1000L);
-                    StringBuilder str = new();
 
-                    if (APHandler.GoalTrack.HasValue && APHandler.GoalTrack.Value.ID == track.Value.ID)
-                        str.Append("This is the goal track, beat it to win!\n");
-                    
-                    if (APHandler.IsTrackAvailable(track.Value)) {
-                        if (hasPlay && hasBeat) str.Append("Track already beaten.");
-                        else {
-                            canPlay = true;
-                            str.Append("Can play this track!");
-                            str.Append($"\nRequired rating: {APHandler.GetRatingString(APHandler.GetRequiredRating())}");
-                            if (!hasPlay) str.Append($"\nPlay reward: {APHandler.FormatItemHint(hints.PlayReward)}");
-                            if (!hasBeat) str.Append($"\nBeat reward: {APHandler.FormatItemHint(hints.BeatReward)}");
-                        }
+                if (TrackCollectionListener.COLLECTIONS.TryGetValue(current._unique_id, out BaseTromboneCollection thisCollection)) {
+                    APCollection apColl = (APCollection)thisCollection;
+                    if (apColl.HasNoTracks()) {
+                        __instance.songdesctext.text = APHandler.APSlot == -1 ? "Not connected to AP!\nPress F1 to open connection manager." : apColl.GetNoTrackString();
+                        __instance.playbtn.enabled = false;
+                        __instance.playbtn.gameObject.SetActive(false);
+                        Monitor.Exit(LockObj);
+                        return;
                     }
-                    else {
-                        str.Append("Track locked.");
-                        
-                        if (APHandler.GoalTrack.HasValue && APHandler.GoalTrack.Value.ID == track.Value.ID) {
-                            // check hot dogs
-                            int reqHotDogs = APHandler.WorldSettings.HotDogs;
-                            if (reqHotDogs > 0) {
-                                int foundHotDogs = APHandler.APFoundItems.Count(id => id == 1004L);
-                                if (foundHotDogs < reqHotDogs) {
-                                    str.Append($"\nHot dogs: {foundHotDogs}/{reqHotDogs}");
-                                    
-                                    // TODO: show these hints somewhere else, text is far too small otherwise (especially with many hot dogs)
-                                    //Hint[] hotDogHints = APHandler.GetHotDogHints();
-                                    //foreach (Hint hint in hotDogHints)
-                                    //    str.Append($"\nHot Dog: {APHandler.FormatItemHint(hint)}");
-                                }
-                            }
-                        }
-                        
-                        if (APHandler.WorldSettings.TrackGating) {
-                            if (!APHandler.APFoundItems.Contains(track.Value.ID))
-                                str.Append($"\nTrack unlock: {APHandler.FormatLocationString(hints.TrackUnlock)}");
-                        }
-                        
-                        if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
-                            if (!APHandler.APFoundItems.Contains(track.Value.Difficulty + 1010L))
-                                str.Append($"\nDifficulty {track.Value.Difficulty}: {APHandler.FormatLocationString(hints.DifficultyUnlocks[0])}");
-                        }
-
-                        if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
-                            int req = track.Value.Difficulty - APHandler.WorldSettings.MinDiff;
-                            if (req > 0) {
-                                int found = APHandler.APFoundItems.Count(id => id == 1011L);
-                                if (found < req) {
-                                    str.Append($"\nDifficulty unlocks: {found}/{req}");
-                                    foreach (Hint hint in hints.DifficultyUnlocks)
-                                        str.Append($"\nProgressive Difficulty: {APHandler.FormatLocationString(hint)}");
-                                }
-                            }
-                        }
-                    }
-
-                    __instance.songdesctext.text = str.ToString();
                 }
-                else __instance.songdesctext.text = "Not an AP track.";
+
+                bool canPlay = false;
+                if (APHandler.APSlot == -1) canPlay = true;
+                else {
+                    Track? track = APHandler.FindTrack(__instance.alltrackslist[__instance.songindex].trackname_short);
+                    if (track.HasValue) {
+                        TrackHints hints = APHandler.GetTrackHints(track.Value);
+
+                        bool hasPlay = APHandler.APSentLocations.Contains(track.Value.ID);
+                        bool hasBeat = APHandler.APSentLocations.Contains(track.Value.ID + 1000L);
+                        StringBuilder str = new();
+
+                        if (APHandler.GoalTrack.HasValue && APHandler.GoalTrack.Value.ID == track.Value.ID)
+                            str.Append("This is the goal track, beat it to win!\n");
+
+                        if (APHandler.IsTrackAvailable(track.Value)) {
+                            if (hasPlay && hasBeat) str.Append("Track already beaten.");
+                            else {
+                                canPlay = true;
+                                str.Append("Can play this track!");
+                                str.Append($"\nRequired rating: {APHandler.GetRatingString(APHandler.GetRequiredRating())}");
+                                if (!hasPlay) str.Append($"\nPlay reward: {APHandler.FormatItemHint(hints.PlayReward)}");
+                                if (!hasBeat) str.Append($"\nBeat reward: {APHandler.FormatItemHint(hints.BeatReward)}");
+                            }
+                        }
+                        else {
+                            str.Append("Track locked.");
+
+                            if (APHandler.GoalTrack.HasValue && APHandler.GoalTrack.Value.ID == track.Value.ID) {
+                                // check hot dogs
+                                int reqHotDogs = APHandler.WorldSettings.HotDogs;
+                                if (reqHotDogs > 0) {
+                                    int foundHotDogs = APHandler.APFoundItems.Count(id => id == 1004L);
+                                    if (foundHotDogs < reqHotDogs) {
+                                        str.Append($"\nHot dogs: {foundHotDogs}/{reqHotDogs}");
+
+                                        // TODO: show these hints somewhere else, text is far too small otherwise (especially with many hot dogs)
+                                        //Hint[] hotDogHints = APHandler.GetHotDogHints();
+                                        //foreach (Hint hint in hotDogHints)
+                                        //    str.Append($"\nHot Dog: {APHandler.FormatItemHint(hint)}");
+                                    }
+                                }
+                            }
+
+                            if (APHandler.WorldSettings.TrackGating) {
+                                if (!APHandler.APFoundItems.Contains(track.Value.ID))
+                                    str.Append($"\nTrack unlock: {APHandler.FormatLocationString(hints.TrackUnlock)}");
+                            }
+
+                            if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
+                                if (!APHandler.APFoundItems.Contains(track.Value.Difficulty + 1010L))
+                                    str.Append($"\nDifficulty {track.Value.Difficulty}: {APHandler.FormatLocationString(hints.DifficultyUnlocks[0])}");
+                            }
+
+                            if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
+                                int req = track.Value.Difficulty - APHandler.WorldSettings.MinDiff;
+                                if (req > 0) {
+                                    int found = APHandler.APFoundItems.Count(id => id == 1011L);
+                                    if (found < req) {
+                                        str.Append($"\nDifficulty unlocks: {found}/{req}");
+                                        foreach (Hint hint in hints.DifficultyUnlocks)
+                                            str.Append($"\nProgressive Difficulty: {APHandler.FormatLocationString(hint)}");
+                                    }
+                                }
+                            }
+                        }
+
+                        __instance.songdesctext.text = str.ToString();
+                    }
+                    else __instance.songdesctext.text = "Not an AP track.";
+                }
+                __instance.playbtn.enabled = canPlay;
+                __instance.playbtn.gameObject.SetActive(canPlay);
             }
-            __instance.playbtn.enabled = canPlay;
-            __instance.playbtn.gameObject.SetActive(canPlay);
+            catch (Exception e) {
+                Logger.LogWarning($"Caught exception: {e.Message}");
+                Logger.LogWarning(e.StackTrace);
+            }
+            Monitor.Exit(LockObj);
         }
     }
 
@@ -357,7 +372,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         else if (APHandler.WorldSettings.GoalTracks == 0) goal = $"Goal track: {APHandler.WorldSettings.GoalTrack}";
         else {
             int numBeaten = tracks.Count(track => APHandler.APSentLocations.Contains(track.ID + 1000L));
-            goal = $"Beat tracks: {numBeaten}/{APHandler.WorldSettings.GoalTrack}";
+            goal = $"Beat tracks: {numBeaten}/{APHandler.WorldSettings.GoalTracks}";
         }
         GUILayout.Label(goal);
 
