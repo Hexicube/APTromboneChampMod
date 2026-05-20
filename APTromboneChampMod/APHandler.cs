@@ -25,7 +25,6 @@ public static class APHandler {
     public static int APTeam = -1, APSlot = -1;
     public static readonly Version APVersion = new(0, 6, 7);
 
-    public static readonly List<long> APFoundItems = [];
     public static readonly List<long> APSentLocations = [];
     public static Hint[] APReceivedHints = [];
 
@@ -39,18 +38,18 @@ public static class APHandler {
         if (APSession is null || APSlot == -1) return false;
         
         if (!FilteredTracks.Contains(track)) return false;
-        if (WorldSettings.TrackGating && !APFoundItems.Contains(track.ID)) return false;
+        if (WorldSettings.TrackGating && !ItemHandler.HasTrack(track.ID)) return false;
         if (track.Difficulty > WorldSettings.MinDiff) {
             if (WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
-                if (!APFoundItems.Contains(1010L + track.Difficulty)) return false;
+                if (!ItemHandler.HasDifficulty(track.Difficulty)) return false;
             }
             if (WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
                 int diff = track.Difficulty - WorldSettings.MinDiff;
-                if (diff > APFoundItems.Count(id => id == 1011L)) return false;
+                if (diff > ItemHandler.ProgressiveDifficulties) return false;
             }
         }
         if (track.Name == WorldSettings.GoalTrack) {
-            int hotDogs = APFoundItems.Count(id => id == 1004L);
+            int hotDogs = ItemHandler.HotDogs;
             if (hotDogs < WorldSettings.HotDogs) return false;
         }
         return true;
@@ -67,7 +66,7 @@ public static class APHandler {
     public static int GetRequiredRating() {
         // 0=C 1=B 2=A 3=S
         int initial = WorldSettings.InitialRating;
-        initial -= APFoundItems.Count(id => id == 1001L);
+        initial -= ItemHandler.RankReductions;
         return initial;
     }
 
@@ -149,7 +148,7 @@ public static class APHandler {
         
         TrackHints hints = new();
         if (WorldSettings.TrackGating) {
-            if (!APFoundItems.Contains(track.ID)) {
+            if (!ItemHandler.HasTrack(track.ID)) {
                 Hint hint = null;
                 foreach (Hint h in APReceivedHints) {
                     if (h.ReceivingPlayer == APSlot && h.ItemId == track.ID) {
@@ -163,7 +162,7 @@ public static class APHandler {
 
         if (track.Difficulty > WorldSettings.MinDiff) {
             if (WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
-                if (!APFoundItems.Contains(1010L + track.Difficulty)) {
+                if (!ItemHandler.HasDifficulty(track.Difficulty)) {
                     Hint hint = null;
                     foreach (Hint h in APReceivedHints) {
                         if (h.ReceivingPlayer == APSlot && h.ItemId == 1010L + track.Difficulty) {
@@ -176,7 +175,7 @@ public static class APHandler {
             }
             if (WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
                 int req = track.Difficulty - WorldSettings.MinDiff;
-                int found = APFoundItems.Count(id => id == 1011L);
+                int found = ItemHandler.ProgressiveDifficulties;
                 if (found < req) {
                     int total = WorldSettings.MaxDiff - WorldSettings.MinDiff;
                     total -= found;
@@ -230,7 +229,7 @@ public static class APHandler {
         }
         if (WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
             diff = 1;
-            int total = WorldSettings.MaxDiff - WorldSettings.MinDiff - APFoundItems.Count(id => id == 1011L);
+            int total = WorldSettings.MaxDiff - WorldSettings.MinDiff - ItemHandler.ProgressiveDifficulties;
             if (total == 0) return;
             int found = APReceivedHints.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1011L);
             if (found >= total) return;
@@ -242,7 +241,7 @@ public static class APHandler {
     public static void TryHintRankReduction() {
         if (WorldSettings.GoalRating == WorldSettings.InitialRating) return;
         if (!CanHint()) return;
-        int total = WorldSettings.InitialRating - WorldSettings.GoalRating - APFoundItems.Count(id => id == 1001L);
+        int total = WorldSettings.InitialRating - WorldSettings.GoalRating - ItemHandler.RankReductions;
         if (total == 0) return;
         int found = APReceivedHints.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1001L);
         if (found >= total) return;
@@ -254,7 +253,7 @@ public static class APHandler {
         if (WorldSettings.HotDogs == 0) return;
         if (!CanHint()) return;
         int total = WorldSettings.HotDogs + WorldSettings.ExtraHotDogs;
-        int found = APFoundItems.Count(id => id == 1004L);
+        int found = ItemHandler.HotDogs;
         if (found >= WorldSettings.HotDogs) return;
         total -= found;
         found = APReceivedHints.Count(hint => hint.ReceivingPlayer == APSlot && hint.ItemId == 1004L);
@@ -284,7 +283,7 @@ public static class APHandler {
         APSession = null;
         APSlot = -1;
         APReceivedHints = [];
-        APFoundItems.Clear();
+        ItemHandler.ResetItems();
         APSentLocations.Clear();
         OnWorldSettingsChanged();
         try {
@@ -344,7 +343,7 @@ public static class APHandler {
                     helper.DequeueItem();
                 }
                 // safe to do this with no lock, the function handles it
-                ItemHandler.OnReceivedItems(items);
+                if (items.Count > 0) ItemHandler.OnReceivedItems(items);
             };
             APSession.Locations.CheckedLocationsUpdated += locs => {
                 // only add locations with the lock, to prevent issues updating collections
@@ -574,59 +573,57 @@ public static class APHandler {
         // make absolutely sure that nothing will change during updating
         lock (TrackUpdateLock) {
             lock (APSentLocations) {
-                lock (APFoundItems) {
-                    // called when receiving items that might change what tracks are playable
-                    AvailableTracks = FilteredTracks.Where(IsTrackAvailable).ToArray();
+                // called when receiving items that might change what tracks are playable
+                AvailableTracks = FilteredTracks.Where(IsTrackAvailable).ToArray();
 
-                    if (GlobalVariables.chosen_collection_index < 0 || GlobalVariables.chosen_collection_index >= GlobalVariables.all_track_collections.Count) return; // never loaded collections
+                if (GlobalVariables.chosen_collection_index < 0 || GlobalVariables.chosen_collection_index >= GlobalVariables.all_track_collections.Count) return; // never loaded collections
+                    
+                // check if the current collection is an AP one
+                global::TrackCollection current = GlobalVariables.all_track_collections[GlobalVariables.chosen_collection_index];
+
+                if (TrackCollectionListener.COLLECTIONS.TryGetValue(current._unique_id, out BaseTromboneCollection thisCollection)) {
+                    // rebuild the collection manually so the track list actually updates
+                    List<TromboneTrack> tracks = thisCollection.BuildTrackList().ToList();
+                    global::TrackCollection allCollection = GlobalVariables.all_track_collections.First(coll => coll._unique_id == "all"); // from base game, contains every track
+                    current.all_tracks = tracks.Select(track => {
+                        return allCollection.all_tracks.First(data => data.trackname_short == track.trackname_short);
+                    }).ToList();
+                    current._trackcount = tracks.Count;
+                    
+                    LevelSelectController controller = UnityEngine.Object.FindObjectOfType<LevelSelectController>();
+                    if (controller) {
+                        // get the currently selected song in the list
+                        string name = controller.alltrackslist[controller.songindex].trackname_short;
                         
-                    // check if the current collection is an AP one
-                    global::TrackCollection current = GlobalVariables.all_track_collections[GlobalVariables.chosen_collection_index];
+                        // rebuild the controller's collection, with skipped sort, then do the sort with no animation
+                        controller.selectNewCollection(true);
+                        controller.sortTracks(GlobalVariables.sortmode, false);
 
-                    if (TrackCollectionListener.COLLECTIONS.TryGetValue(current._unique_id, out BaseTromboneCollection thisCollection)) {
-                        // rebuild the collection manually so the track list actually updates
-                        List<TromboneTrack> tracks = thisCollection.BuildTrackList().ToList();
-                        global::TrackCollection allCollection = GlobalVariables.all_track_collections.First(coll => coll._unique_id == "all"); // from base game, contains every track
-                        current.all_tracks = tracks.Select(track => {
-                            return allCollection.all_tracks.First(data => data.trackname_short == track.trackname_short);
-                        }).ToList();
-                        current._trackcount = tracks.Count;
-                        
-                        LevelSelectController controller = UnityEngine.Object.FindObjectOfType<LevelSelectController>();
-                        if (controller) {
-                            // get the currently selected song in the list
-                            string name = controller.alltrackslist[controller.songindex].trackname_short;
-                            
-                            // rebuild the controller's collection, with skipped sort, then do the sort with no animation
-                            controller.selectNewCollection(true);
-                            controller.sortTracks(GlobalVariables.sortmode, false);
-
-                            // try and select the track that was previously selected
-                            int idx = -1;
-                            for (int a = 0; a < controller.alltrackslist.Count; a++) {
-                                if (controller.alltrackslist[a].trackname_short == name) {
-                                    idx = a;
-                                    break;
-                                }
-                            }
-
-                            if (idx != -1) {
-                                // only repopulate names
-                                controller.songindex = idx;
-                                GlobalVariables.levelselect_index = idx;
-                                controller.populateSongNames(false);
-                            }
-                            else {
-                                // brief animations and triggers track preview to update
-                                controller.populateSongNames(true);
+                        // try and select the track that was previously selected
+                        int idx = -1;
+                        for (int a = 0; a < controller.alltrackslist.Count; a++) {
+                            if (controller.alltrackslist[a].trackname_short == name) {
+                                idx = a;
+                                break;
                             }
                         }
-                    }
 
-                    // wait for this to finish
-                    var iter = TrackReloader.ReloadAll(null).ForEach(_ => {});
-                    while (iter.MoveNext()) {}
+                        if (idx != -1) {
+                            // only repopulate names
+                            controller.songindex = idx;
+                            GlobalVariables.levelselect_index = idx;
+                            controller.populateSongNames(false);
+                        }
+                        else {
+                            // brief animations and triggers track preview to update
+                            controller.populateSongNames(true);
+                        }
+                    }
                 }
+
+                // wait for this to finish
+                var iter = TrackReloader.ReloadAll(null).ForEach(_ => {});
+                while (iter.MoveNext()) {}
             }
         }
     }

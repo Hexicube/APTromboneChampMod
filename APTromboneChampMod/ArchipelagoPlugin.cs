@@ -158,7 +158,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                                 // check hot dogs
                                 int reqHotDogs = APHandler.WorldSettings.HotDogs;
                                 if (reqHotDogs > 0) {
-                                    int foundHotDogs = APHandler.APFoundItems.Count(id => id == 1004L);
+                                    int foundHotDogs = ItemHandler.HotDogs;
                                     if (foundHotDogs < reqHotDogs) {
                                         str.Append($"\nHot dogs: {foundHotDogs}/{reqHotDogs}");
 
@@ -171,19 +171,19 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                             }
 
                             if (APHandler.WorldSettings.TrackGating) {
-                                if (!APHandler.APFoundItems.Contains(track.Value.ID))
+                                if (!ItemHandler.HasTrack(track.Value.ID))
                                     str.Append($"\nTrack unlock: {APHandler.FormatLocationString(hints.TrackUnlock)}");
                             }
 
                             if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
-                                if (!APHandler.APFoundItems.Contains(track.Value.Difficulty + 1010L))
+                                if (!ItemHandler.HasDifficulty(track.Value.Difficulty))
                                     str.Append($"\nDifficulty {track.Value.Difficulty}: {APHandler.FormatLocationString(hints.DifficultyUnlocks[0])}");
                             }
 
                             if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
                                 int req = track.Value.Difficulty - APHandler.WorldSettings.MinDiff;
                                 if (req > 0) {
-                                    int found = APHandler.APFoundItems.Count(id => id == 1011L);
+                                    int found = ItemHandler.ProgressiveDifficulties;
                                     if (found < req) {
                                         str.Append($"\nDifficulty unlocks: {found}/{req}");
                                         foreach (Hint hint in hints.DifficultyUnlocks)
@@ -261,8 +261,8 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
             }
 
             if (APHandler.GoalTrack != null && APHandler.IsTrackAvailable(APHandler.GoalTrack.Value)) {
-                int rank = APHandler.APFoundItems.Count(id => id == 1001L);
-                int req = APHandler.WorldSettings.InitialRating - APHandler.WorldSettings.GoalRating;
+                int rank = ItemHandler.RankReductions;
+                int req  = APHandler.WorldSettings.InitialRating - APHandler.WorldSettings.GoalRating;
                 if (rank >= req) {
                     // if the goal track is available, indicate that and early exit
                     // TODO
@@ -272,14 +272,14 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
             
             if (APHandler.WorldSettings.HotDogs > 0) {
                 // if hot dogs are required, indicate if enough have been found
-                bool hasEnough = APHandler.APFoundItems.Count(id => id == 1004L) >= APHandler.WorldSettings.HotDogs;
+                bool hasEnough = ItemHandler.HotDogs >= APHandler.WorldSettings.HotDogs;
                 GUI.DrawTexture(new Rect(x, height - 50, 40, 40), hasEnough ? ImageHandler.HotDog : ImageHandler.HotDogGrey);
                 x += 50;
             }
 
             if (APHandler.WorldSettings.InitialRating > APHandler.WorldSettings.GoalRating) {
                 // if there are rating reduction items, indicate if they were all found and what the current rank requirement is
-                bool hasEnough = APHandler.APFoundItems.Count(id => id == 1001L) >= APHandler.WorldSettings.InitialRating - APHandler.WorldSettings.GoalRating;
+                bool hasEnough = ItemHandler.RankReductions >= APHandler.WorldSettings.InitialRating - APHandler.WorldSettings.GoalRating;
                 GUI.DrawTexture(new Rect(x, height - 50, 40, 40), hasEnough ? ImageHandler.RankIndicator : ImageHandler.RankIndicatorGrey);
                 string rank = new[] {"C", "B", "A", "S"}[APHandler.GetRequiredRating()];
                 GUI.color = Color.black;
@@ -294,7 +294,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 List<int> difficulties = [];
                 List<int> locked = [];
                 if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
-                    int maxDiff = APHandler.WorldSettings.MinDiff + APHandler.APFoundItems.Count(id => id == 1011L);
+                    int maxDiff = APHandler.WorldSettings.MinDiff + ItemHandler.ProgressiveDifficulties;
                     for (int a = APHandler.WorldSettings.MinDiff + 1; a <= APHandler.WorldSettings.MaxDiff; a++) {
                         difficulties.Add(a);
                         if (maxDiff < a) locked.Add(a);
@@ -303,7 +303,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
                     for (int a = APHandler.WorldSettings.MinDiff + 1; a <= APHandler.WorldSettings.MaxDiff; a++) {
                         difficulties.Add(a);
-                        if (!APHandler.APFoundItems.Contains(a + 1010L)) locked.Add(a);
+                        if (!ItemHandler.HasDifficulty(a)) locked.Add(a);
                     }
                 }
                 foreach (int diff in difficulties) {
@@ -377,7 +377,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         GUILayout.Label(goal);
 
         if (APHandler.WorldSettings.HotDogs > 0) {
-            int found = APHandler.APFoundItems.Count(id => id == 1004L);
+            int found = ItemHandler.HotDogs;
             if (APHandler.WorldSettings.ExtraHotDogs > 0) {
                 int total = APHandler.WorldSettings.HotDogs + APHandler.WorldSettings.ExtraHotDogs;
                 GUILayout.Label($"Hot Dogs: {found}/{APHandler.WorldSettings.HotDogs} ({total})");
@@ -390,7 +390,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
         if (APHandler.WorldSettings.InitialRating != APHandler.WorldSettings.GoalRating) {
             int total = APHandler.WorldSettings.InitialRating - APHandler.WorldSettings.GoalRating;
-            int found = APHandler.APFoundItems.Count(id => id == 1001L);
+            int found = ItemHandler.RankReductions;
             GUILayout.Label($"Rating Reduction items: {found}/{total}");
         }
         
@@ -399,19 +399,19 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         if (APHandler.WorldSettings.TrackGating ||
             APHandler.WorldSettings.DifficultyGating != APSettings.DiffGateType.OFF) {
             if (APHandler.WorldSettings.TrackGating) {
-                int found = tracks.Count(track => APHandler.APFoundItems.Contains(track.ID));
+                int found = tracks.Count(track => ItemHandler.HasTrack(track.ID));
                 GUILayout.Label($"Tracks unlocked: {found}/{tracks.Length}");
             }
 
             if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
                 List<int> unlockedDiffs = [APHandler.WorldSettings.MinDiff];
                 for (int a = APHandler.WorldSettings.MinDiff + 1; a <= APHandler.WorldSettings.MaxDiff; a++) {
-                    if (APHandler.APFoundItems.Contains(a + 1010L)) unlockedDiffs.Add(a);
+                    if (ItemHandler.HasDifficulty(a)) unlockedDiffs.Add(a);
                 }
                 GUILayout.Label($"Difficulties unlocked: {string.Join(", ", unlockedDiffs)}");
             }
             if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
-                int maxDiff = APHandler.WorldSettings.MinDiff + APHandler.APFoundItems.Count(id => id == 1011L);
+                int maxDiff = APHandler.WorldSettings.MinDiff + ItemHandler.ProgressiveDifficulties;
                 GUILayout.Label($"Max difficulty: {maxDiff}/{APHandler.WorldSettings.MaxDiff}");
             }
         
@@ -449,7 +449,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.ON) {
             List<int> unfound = [];
             for (int a = APHandler.WorldSettings.MinDiff + 1; a <= APHandler.WorldSettings.MaxDiff; a++) {
-                if (!APHandler.APFoundItems.Contains(a + 1010L)) unfound.Add(a);
+                if (!ItemHandler.HasDifficulty(a)) unfound.Add(a);
             }
             if (unfound.Count > 0) {
                 listedItem = true;
@@ -477,7 +477,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         }
         if (APHandler.WorldSettings.DifficultyGating == APSettings.DiffGateType.PROG) {
             int total = APHandler.WorldSettings.MaxDiff - APHandler.WorldSettings.MinDiff;
-            int found = APHandler.APFoundItems.Count(id => id == 1011L);
+            int found = ItemHandler.ProgressiveDifficulties;
             if (found < total) {
                 listedItem = true;
                 Hint[] hints = APHandler.APReceivedHints.Where(hint => hint.ReceivingPlayer == APHandler.APSlot && hint.ItemId == 1011L).ToArray();
@@ -504,7 +504,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         // show missing rank reductions
         if (APHandler.WorldSettings.InitialRating != APHandler.WorldSettings.GoalRating) {
             int total = APHandler.WorldSettings.InitialRating - APHandler.WorldSettings.GoalRating;
-            int found = APHandler.APFoundItems.Count(id => id == 1001L);
+            int found = ItemHandler.RankReductions;
             if (found < total) {
                 listedItem = true;
                 Hint[] hints = APHandler.APReceivedHints.Where(hint => hint.ReceivingPlayer == APHandler.APSlot && hint.ItemId == 1001L).ToArray();
@@ -531,7 +531,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         // show missing hot dogs
         if (APHandler.WorldSettings.HotDogs > 0) {
             int total = APHandler.WorldSettings.HotDogs + APHandler.WorldSettings.ExtraHotDogs;
-            int found = APHandler.APFoundItems.Count(id => id == 1004L);
+            int found = ItemHandler.HotDogs;
             if (found < APHandler.WorldSettings.HotDogs) {
                 listedItem = true;
                 Hint[] hints = APHandler.APReceivedHints.Where(hint => hint.ReceivingPlayer == APHandler.APSlot && hint.ItemId == 1004L).ToArray();
@@ -558,7 +558,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         // show missing track unlocks
         if (APHandler.WorldSettings.TrackGating) {
             // show all missing track items
-            Track[] unfound = APHandler.FilteredTracks.Where(track => !APHandler.APFoundItems.Contains(track.ID)).ToArray();
+            Track[] unfound = APHandler.FilteredTracks.Where(track => !ItemHandler.HasTrack(track.ID)).ToArray();
             if (unfound.Length > 0) {
                 listedItem = true;
                 GUILayout.Label($"Track unlocks remaining: {unfound.Length}");
