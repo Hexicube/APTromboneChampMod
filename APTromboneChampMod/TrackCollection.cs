@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using BaboonAPI.Hooks.Tracks;
 using BaboonAPI.Hooks.Tracks.Collections;
 using BaboonAPI.Utility;
@@ -77,6 +78,7 @@ public class TrackCollectionAvailWithChecksOnly() : BaseTromboneCollection("AP_c
                 unseen.Remove(match.Value);
                 if (APHandler.IsTrackAvailable(match.Value)) {
                     if (
+                        !APHandler.BeatenTracks.Contains(match.Value.ID) ||
                         !APHandler.APSentLocations.Contains(match.Value.ID) ||
                         !APHandler.APSentLocations.Contains(match.Value.ID + 1000L)
                     ) {
@@ -107,6 +109,7 @@ public class TrackCollectionAvailWithChecksOnly() : BaseTromboneCollection("AP_c
                 if (trackDef.Name.ToLower() == track.trackname_short.ToLower()) {
                     if (APHandler.IsTrackAvailable(trackDef)) {
                         if (
+                            !APHandler.BeatenTracks.Contains(trackDef.ID) ||
                             !APHandler.APSentLocations.Contains(trackDef.ID) ||
                             !APHandler.APSentLocations.Contains(trackDef.ID + 1000L)
                         ) return false;

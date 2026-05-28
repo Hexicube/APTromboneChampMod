@@ -136,13 +136,14 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
                         bool hasPlay = APHandler.APSentLocations.Contains(track.Value.ID);
                         bool hasBeat = APHandler.APSentLocations.Contains(track.Value.ID + 1000L);
+                        bool trackBeaten = APHandler.BeatenTracks.Contains(track.Value.ID);
                         StringBuilder str = new();
 
                         if (APHandler.GoalTrack.HasValue && APHandler.GoalTrack.Value.ID == track.Value.ID)
                             str.Append("This is the goal track, beat it to win!\n");
 
                         if (APHandler.IsTrackAvailable(track.Value)) {
-                            if (hasPlay && hasBeat) str.Append("Track already beaten.");
+                            if (hasPlay && hasBeat && trackBeaten) str.Append("Track already beaten.");
                             else {
                                 canPlay = true;
                                 str.Append("Can play this track!");
@@ -371,7 +372,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         if (APHandler.HasGoaled()) goal = "Goaled!";
         else if (APHandler.WorldSettings.GoalTracks == 0) goal = $"Goal track: {APHandler.WorldSettings.GoalTrack}";
         else {
-            int numBeaten = tracks.Count(track => APHandler.APSentLocations.Contains(track.ID + 1000L));
+            int numBeaten = tracks.Count(track => APHandler.BeatenTracks.Contains(track.ID));
             goal = $"Beat tracks: {numBeaten}/{APHandler.WorldSettings.GoalTracks}";
         }
         GUILayout.Label(goal);

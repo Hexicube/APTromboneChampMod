@@ -76,7 +76,7 @@ public static class APHandler {
         APSession.Locations.CompleteLocationChecksAsync(IDs);
 
         if (!beaten || BeatenTracks.Contains(track.ID)) return;
-        APSession.DataStorage["beaten"] += new long[] { track.ID };
+        APSession.DataStorage[$"_{APTeam}_{APSlot}_beaten"] += new long[] { track.ID };
         BeatenTracks = [..BeatenTracks, track.ID];
         if (HasGoaled()) {
             APSession.SetGoalAchieved();
@@ -475,12 +475,12 @@ public static class APHandler {
             APSlot = success.Slot;
             ArchipelagoPlugin.Logger.LogInfo($"Successfully connected to {host}:{port} - Team: {APTeam}, Slot: {APSlot}");
 
-            APSession.DataStorage["beaten"].Initialize(new long[] {});
-            APSession.DataStorage["beaten"].OnValueChanged += (oldData, newData, args) => {
+            APSession.DataStorage[$"_{APTeam}_{APSlot}_beaten"].Initialize(new long[] {});
+            APSession.DataStorage[$"_{APTeam}_{APSlot}_beaten"].OnValueChanged += (oldData, newData, args) => {
                 BeatenTracks = [..newData.Select(v => v.ToObject<long>())];
                 if (HasGoaled()) APSession.SetGoalAchieved();
             };
-            BeatenTracks = APSession.DataStorage["beaten"].To<long[]>();
+            BeatenTracks = APSession.DataStorage[$"_{APTeam}_{APSlot}_beaten"].To<long[]>();
             
             WorldSettings.GoalTracks = int.Parse(success.SlotData["goal"].ToString());
             WorldSettings.GoalTrack = success.SlotData["goal_track"].ToString();
