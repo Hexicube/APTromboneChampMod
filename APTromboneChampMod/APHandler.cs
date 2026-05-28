@@ -475,9 +475,9 @@ public static class APHandler {
             APSlot = success.Slot;
             ArchipelagoPlugin.Logger.LogInfo($"Successfully connected to {host}:{port} - Team: {APTeam}, Slot: {APSlot}");
 
-            APSession.DataStorage["beaten"].Initialize(new long[] { });
-            APSession.DataStorage["beaten"].OnValueChanged += (oldData, newData) => {
-                BeatenTracks = newData.To<long[]>();
+            APSession.DataStorage["beaten"].Initialize(new long[] {});
+            APSession.DataStorage["beaten"].OnValueChanged += (oldData, newData, args) => {
+                BeatenTracks = [..newData.Select(v => v.ToObject<long>())];
                 if (HasGoaled()) APSession.SetGoalAchieved();
             };
             BeatenTracks = APSession.DataStorage["beaten"].To<long[]>();
