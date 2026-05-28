@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
@@ -10,7 +9,6 @@ using Archipelago.MultiClient.Net.Models;
 using BaboonAPI.Hooks;
 using BaboonAPI.Hooks.Tracks;
 using BaboonAPI.Hooks.Tracks.Collections;
-using BepInEx.Logging;
 using Newtonsoft.Json.Linq;
 
 namespace APTromboneChampMod;
@@ -19,6 +17,7 @@ public static class APHandler {
     public static APSettings WorldSettings = new();
     public static Track[] FilteredTracks = []; // all tracks in the apworld based on settings
     public static Track[] AvailableTracks = []; // tracks that can be played due to received items
+    public static long[] BeatenTracks = []; // tracks listed as beaten in AP storage
     public static Track? GoalTrack = null;
 
     public static ArchipelagoSession APSession = null;
@@ -75,8 +74,14 @@ public static class APHandler {
         if (!IsTrackAvailable(track)) return; // precaution
         long[] IDs = beaten ? [track.ID, track.ID + 1000L] : [track.ID];
         APSession.Locations.CompleteLocationChecksAsync(IDs);
-        if (!beaten) return;
-        if (HasGoaled(track.ID)) APSession.SetGoalAchieved();
+
+        if (!beaten || BeatenTracks.Contains(track.ID)) return;
+        APSession.DataStorage["beaten"] += new long[] { track.ID };
+        BeatenTracks = [..BeatenTracks, track.ID];
+        if (HasGoaled()) {
+            APSession.SetGoalAchieved();
+            if (APSession.Players.ActivePlayer.Alias != "DONE") APSession.Say("!alias DONE");
+        }
     }
 
     public static bool CanHint() {
@@ -262,18 +267,16 @@ public static class APHandler {
         if (item is not null) APSession.Say($"!hint {item}");
     }
 
-    public static bool HasGoaled(long lastTrackBeaten = -1) {
+    public static bool HasGoaled() {
         if (WorldSettings.GoalTracks == 0) {
             if (GoalTrack.HasValue) {
-                if (lastTrackBeaten == GoalTrack.Value.ID || APSentLocations.Contains(GoalTrack.Value.ID + 1000L)) return true;
+                if (BeatenTracks.Contains(GoalTrack.Value.ID)) return true;
             }
             else ArchipelagoPlugin.Logger.LogWarning("Goal tracks is 0 and no goal track is set!");
             return false;
         }
         
-        int numBeaten = APSentLocations.Count(id => id > 1000L);
-        if (lastTrackBeaten != -1 && !APSentLocations.Contains(lastTrackBeaten + 1000L)) numBeaten++;
-        return numBeaten >= WorldSettings.GoalTracks;
+        return BeatenTracks.Length >= WorldSettings.GoalTracks;
     }
 
     public static long ConnectTime;
@@ -471,6 +474,13 @@ public static class APHandler {
             APTeam = success.Team;
             APSlot = success.Slot;
             ArchipelagoPlugin.Logger.LogInfo($"Successfully connected to {host}:{port} - Team: {APTeam}, Slot: {APSlot}");
+
+            APSession.DataStorage["beaten"].Initialize(new long[] { });
+            APSession.DataStorage["beaten"].OnValueChanged += (oldData, newData) => {
+                BeatenTracks = newData.To<long[]>();
+                if (HasGoaled()) APSession.SetGoalAchieved();
+            };
+            BeatenTracks = APSession.DataStorage["beaten"].To<long[]>();
             
             WorldSettings.GoalTracks = int.Parse(success.SlotData["goal"].ToString());
             WorldSettings.GoalTrack = success.SlotData["goal_track"].ToString();
@@ -483,7 +493,7 @@ public static class APHandler {
             ArchipelagoPlugin.Logger.LogInfo($"Easy Track Gap: {WorldSettings.EasyTrackGap}");
             WorldSettings.HotDogs = int.Parse(success.SlotData["hot_dogs"].ToString());
             WorldSettings.ExtraHotDogs = int.Parse(success.SlotData["extra_hot_dogs"].ToString());
-            ArchipelagoPlugin.Logger.LogInfo($"HotDogs: {WorldSettings.HotDogs} + {WorldSettings.ExtraHotDogs}");
+            ArchipelagoPlugin.Logger.LogInfo($"Hot Dogs: {WorldSettings.HotDogs} + {WorldSettings.ExtraHotDogs}");
             WorldSettings.TrackGating = int.Parse(success.SlotData["track_gating"].ToString()) > 0;
             ArchipelagoPlugin.Logger.LogInfo($"Track gating: {WorldSettings.TrackGating}");
             WorldSettings.DifficultyGating = (APSettings.DiffGateType)int.Parse(success.SlotData["difficulty_gating"].ToString());
