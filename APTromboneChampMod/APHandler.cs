@@ -82,6 +82,8 @@ public static class APHandler {
             APSession.SetGoalAchieved();
             if (APSession.Players.ActivePlayer.Alias != "DONE") APSession.Say("!alias DONE");
         }
+        
+        OnTrackAvailabilityChanged();
     }
 
     public static bool CanHint() {
@@ -367,7 +369,7 @@ public static class APHandler {
                         }
                     }
                 }
-                OnTrackAvailabilityChanged();
+                OnHintsChanged();
             };
             APSession.Hints.TrackHints(hints => {
                 APReceivedHints = hints.Where(hint => !hint.Found).ToArray();
@@ -477,8 +479,11 @@ public static class APHandler {
 
             APSession.DataStorage[$"_{APTeam}_{APSlot}_beaten"].Initialize(new long[] {});
             APSession.DataStorage[$"_{APTeam}_{APSlot}_beaten"].OnValueChanged += (oldData, newData, args) => {
+                long[] oldBeaten = BeatenTracks;
                 BeatenTracks = [..newData.Select(v => v.ToObject<long>())];
+
                 if (HasGoaled()) APSession.SetGoalAchieved();
+                if (oldBeaten.Length != BeatenTracks.Length || oldBeaten.Any(v => !BeatenTracks.Contains(v))) OnTrackAvailabilityChanged();
             };
             BeatenTracks = APSession.DataStorage[$"_{APTeam}_{APSlot}_beaten"].To<long[]>();
             
