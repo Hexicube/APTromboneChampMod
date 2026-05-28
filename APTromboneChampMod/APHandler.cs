@@ -369,7 +369,7 @@ public static class APHandler {
                         }
                     }
                 }
-                OnHintsChanged();
+                OnTrackAvailabilityChanged();
             };
             APSession.Hints.TrackHints(hints => {
                 APReceivedHints = hints.Where(hint => !hint.Found).ToArray();
