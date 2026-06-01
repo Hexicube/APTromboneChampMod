@@ -72,9 +72,9 @@ public static class APHandler {
         return initial;
     }
 
-    public static void SendTrack(Track track, bool beaten) {
-        if (APSession is null || APSlot == -1) return;
-        if (!IsTrackAvailable(track)) return; // precaution
+    public static long[] SendTrack(Track track, bool beaten) {
+        if (APSession is null || APSlot == -1) return [];
+        if (!IsTrackAvailable(track)) return []; // precaution
 
         if (DeathLinkCounter > 0) {
             if (ArchipelagoPlugin.DeathLinkMode == 0) {
@@ -84,12 +84,12 @@ public static class APHandler {
             else if (ArchipelagoPlugin.DeathLinkMode == 1) {
                 DeathLinkCounter = 0;
                 ArchipelagoPlugin.Logger.LogInfo($"DeathLink blocked score entry, counter reset.");
-                return;
+                return [];
             }
             else {
                 DeathLinkCounter--;
                 ArchipelagoPlugin.Logger.LogInfo($"DeathLink blocked score entry, counter is now {DeathLinkCounter}.");
-                return;
+                return [];
             }
         }
 
@@ -98,10 +98,10 @@ public static class APHandler {
             DeathLink.SendDeathLink(new DeathLink(APSession.Players.ActivePlayer.Alias, $"{APSession.Players.ActivePlayer.Alias} didn't doot hard enough."));
         }
 
-        long[] IDs = beaten ? [track.ID, track.ID + 1000L] : [track.ID];
-        APSession.Locations.CompleteLocationChecksAsync(IDs);
+        long[] IDs = ((long[])(beaten ? [track.ID, track.ID + 1000L] : [track.ID])).Where(id => !BeatenTracks.Contains(id)).ToArray();
+        if (IDs.Length == 0) return [];
 
-        if (!beaten || BeatenTracks.Contains(track.ID)) return;
+        APSession.Locations.CompleteLocationChecksAsync(IDs);
         APSession.DataStorage[$"_{APTeam}_{APSlot}_beaten"] += new long[] { track.ID };
         BeatenTracks = [..BeatenTracks, track.ID];
         if (HasGoaled()) {
@@ -110,6 +110,8 @@ public static class APHandler {
         }
         
         OnTrackAvailabilityChanged();
+
+        return IDs;
     }
 
     public static bool CanHint() {

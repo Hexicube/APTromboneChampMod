@@ -79,7 +79,13 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                     return;
                 }
                 
-                APHandler.SendTrack(track, beaten);
+                long[] sentIDs = APHandler.SendTrack(track, beaten);
+                // if enabled, reveal missing items
+                if (HintLocsOnMissed) {
+                    long[] missed = ((long[])[track.ID, track.ID + 1000L]).Where(id => !sentIDs.Contains(id)).ToArray();
+                    if (missed.Length > 0)
+                        APHandler.APSession.Locations.ScoutLocationsAsync(Archipelago.MultiClient.Net.Enums.HintCreationPolicy.CreateAndAnnounceOnce, missed);
+                }
             }
             else Logger.LogInfo("Track was not in the list of AP tracks.");
         }
@@ -358,6 +364,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     }
 
     public static bool SendChatToLog = true;
+    public static bool HintLocsOnMissed = false;
     public static int DeathLinkMode = 0;
     private static string[] DeathLinkButtonText = { "Disabled", "Enabled", "Cumulative" };
 
@@ -365,6 +372,10 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         GUILayout.Label("Connected to AP server.");
         
         SendChatToLog = GUILayout.Toggle(SendChatToLog, "Send Chat to Log");
+
+        GUILayout.Space(10);
+
+        HintLocsOnMissed = GUILayout.Toggle(HintLocsOnMissed, "Hint missed locations on track completion");
 
         GUILayout.Space(10);
 
