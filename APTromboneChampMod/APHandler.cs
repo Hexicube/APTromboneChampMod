@@ -425,7 +425,7 @@ public static class APHandler {
                             ];
                             OnHintsChanged();
                         }
-                        if (ArchipelagoPlugin.SendChatToLog) ArchipelagoPlugin.Logger.LogInfo(message.ToString());
+                        if (!found && ArchipelagoPlugin.SendChatToLog) ArchipelagoPlugin.Logger.LogInfo(message.ToString());
                     }
                     return; // for some reason this message type is also ItemSendLogMessage???
                 }
