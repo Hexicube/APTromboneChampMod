@@ -365,8 +365,11 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
     public static bool SendChatToLog = true;
     public static bool HintLocsOnMissed = false;
-    public static int DeathLinkMode = 0;
+    public static int DeathLinkInboundMode = 0;
     private static string[] DeathLinkButtonText = { "Disabled", "Enabled", "Cumulative" };
+    public static bool DeathLinkOutbound = false;
+
+    public static bool ShouldEnableDeathlink => DeathLinkInboundMode != 0 || DeathLinkOutbound;
 
     void ShowTrackerWindow() {
         GUILayout.Label("Connected to AP server.");
@@ -379,10 +382,17 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
         GUILayout.Space(10);
 
-        GUILayout.Label("DeathLink mode");
-        if (GUILayout.Button(DeathLinkButtonText[DeathLinkMode])) {
-            DeathLinkMode = (DeathLinkMode + 1) % 3;
-            if (DeathLinkMode == 0) APHandler.DeathLink.DisableDeathLink();
+        GUILayout.Label("Receive DeathLink from other players");
+        if (GUILayout.Button(DeathLinkButtonText[DeathLinkInboundMode])) {
+            DeathLinkInboundMode = (DeathLinkInboundMode + 1) % 3;
+            if (ShouldEnableDeathlink) APHandler.DeathLink.DisableDeathLink();
+            else APHandler.DeathLink.EnableDeathLink();
+        }
+
+        bool oldValue = DeathLinkOutbound;
+        DeathLinkOutbound = GUILayout.Toggle(DeathLinkOutbound, "Send DeathLink on failing to beat tracks");
+        if (oldValue != DeathLinkOutbound) {
+            if (ShouldEnableDeathlink) APHandler.DeathLink.DisableDeathLink();
             else APHandler.DeathLink.EnableDeathLink();
         }
         

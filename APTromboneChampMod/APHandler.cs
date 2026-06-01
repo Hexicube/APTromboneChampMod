@@ -77,11 +77,11 @@ public static class APHandler {
         if (!IsTrackAvailable(track)) return []; // precaution
 
         if (DeathLinkCounter > 0) {
-            if (ArchipelagoPlugin.DeathLinkMode == 0) {
+            if (ArchipelagoPlugin.DeathLinkInboundMode == 0) {
                 ArchipelagoPlugin.Logger.LogInfo("DeathLink is disabled, resetting death counter.");
                 DeathLinkCounter = 0;
             }
-            else if (ArchipelagoPlugin.DeathLinkMode == 1) {
+            else if (ArchipelagoPlugin.DeathLinkInboundMode == 1) {
                 DeathLinkCounter = 0;
                 ArchipelagoPlugin.Logger.LogInfo($"DeathLink blocked score entry, counter reset.");
                 return [];
@@ -93,7 +93,7 @@ public static class APHandler {
             }
         }
 
-        if (!beaten && ArchipelagoPlugin.DeathLinkMode != 0) {
+        if (!beaten && ArchipelagoPlugin.DeathLinkOutbound) {
             ArchipelagoPlugin.Logger.LogInfo("Failed to beat track, sending death.");
             DeathLink.SendDeathLink(new DeathLink(APSession.Players.ActivePlayer.Alias, $"{APSession.Players.ActivePlayer.Alias} didn't doot hard enough."));
         }
@@ -553,10 +553,10 @@ public static class APHandler {
             });
 
             DeathLink = APSession.CreateDeathLinkService();
-            if (ArchipelagoPlugin.DeathLinkMode != 0) DeathLink.EnableDeathLink();
+            if (ArchipelagoPlugin.ShouldEnableDeathlink) DeathLink.EnableDeathLink();
             DeathLink.OnDeathLinkReceived += (deathLinkObj) => {
                 ArchipelagoPlugin.Logger.LogInfo($"Received death from {deathLinkObj.Source}: {deathLinkObj.Cause}");
-                if (ArchipelagoPlugin.DeathLinkMode != 0) {
+                if (ArchipelagoPlugin.DeathLinkInboundMode != 0) {
                     DeathLinkCounter++;
                     ArchipelagoPlugin.Logger.LogInfo($"DeathLink counter incremented to {DeathLinkCounter}.");
                 }
