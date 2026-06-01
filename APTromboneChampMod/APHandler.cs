@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Archipelago.MultiClient.Net;
+using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.MessageLog.Messages;
@@ -21,6 +22,8 @@ public static class APHandler {
     public static Track? GoalTrack = null;
 
     public static ArchipelagoSession APSession = null;
+    public static DeathLinkService DeathLink = null;
+    public static int DeathLinkCounter = 0;
     public static int APTeam = -1, APSlot = -1;
     public static readonly Version APVersion = new(0, 6, 7);
 
@@ -72,6 +75,29 @@ public static class APHandler {
     public static void SendTrack(Track track, bool beaten) {
         if (APSession is null || APSlot == -1) return;
         if (!IsTrackAvailable(track)) return; // precaution
+
+        if (DeathLinkCounter > 0) {
+            if (ArchipelagoPlugin.DeathLinkMode == 0) {
+                ArchipelagoPlugin.Logger.LogInfo("DeathLink is disabled, resetting death counter.");
+                DeathLinkCounter = 0;
+            }
+            else if (ArchipelagoPlugin.DeathLinkMode == 1) {
+                DeathLinkCounter = 0;
+                ArchipelagoPlugin.Logger.LogInfo($"DeathLink blocked score entry, counter reset.");
+                return;
+            }
+            else {
+                DeathLinkCounter--;
+                ArchipelagoPlugin.Logger.LogInfo($"DeathLink blocked score entry, counter is now {DeathLinkCounter}.");
+                return;
+            }
+        }
+
+        if (!beaten && ArchipelagoPlugin.DeathLinkMode != 0) {
+            ArchipelagoPlugin.Logger.LogInfo("Failed to beat track, sending death.");
+            DeathLink.SendDeathLink(new DeathLink(APSession.Players.ActivePlayer.Alias, $"{APSession.Players.ActivePlayer.Alias} didn't doot hard enough."));
+        }
+
         long[] IDs = beaten ? [track.ID, track.ID + 1000L] : [track.ID];
         APSession.Locations.CompleteLocationChecksAsync(IDs);
 
@@ -523,6 +549,17 @@ public static class APHandler {
                 APReceivedHints = task.Result.Where(hint => !hint.Found).ToArray();
                 OnHintsChanged();
             });
+
+            DeathLink = APSession.CreateDeathLinkService();
+            if (ArchipelagoPlugin.DeathLinkMode != 0) DeathLink.EnableDeathLink();
+            DeathLink.OnDeathLinkReceived += (deathLinkObj) => {
+                ArchipelagoPlugin.Logger.LogInfo($"Received death from {deathLinkObj.Source}: {deathLinkObj.Cause}");
+                if (ArchipelagoPlugin.DeathLinkMode != 0) {
+                    DeathLinkCounter++;
+                    ArchipelagoPlugin.Logger.LogInfo($"DeathLink counter incremented to {DeathLinkCounter}.");
+                }
+                else ArchipelagoPlugin.Logger.LogInfo("Ignoring death, DeathLink is disabled.");
+            };
         }
         catch (Exception e) {
             ArchipelagoPlugin.Logger.LogError($"Unusual error: {e.Message}");

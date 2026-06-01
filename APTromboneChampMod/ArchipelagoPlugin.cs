@@ -358,11 +358,22 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     }
 
     public static bool SendChatToLog = true;
+    public static int DeathLinkMode = 0;
+    private static string[] DeathLinkButtonText = { "Disabled", "Enabled", "Cumulative" };
 
     void ShowTrackerWindow() {
         GUILayout.Label("Connected to AP server.");
         
         SendChatToLog = GUILayout.Toggle(SendChatToLog, "Send Chat to Log");
+
+        GUILayout.Space(10);
+
+        GUILayout.Label("DeathLink mode");
+        if (GUILayout.Button(DeathLinkButtonText[DeathLinkMode])) {
+            DeathLinkMode = (DeathLinkMode + 1) % 3;
+            if (DeathLinkMode == 0) APHandler.DeathLink.DisableDeathLink();
+            else APHandler.DeathLink.EnableDeathLink();
+        }
         
         GUILayout.Space(10);
 
