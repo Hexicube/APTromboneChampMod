@@ -81,7 +81,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 
                 long[] sentIDs = APHandler.SendTrack(track, beaten);
                 // if enabled, reveal missing items
-                if (HintLocsOnMissed) {
+                if (HintLocsOnMissed && APHandler.APSlot != -1) {
                     long[] missed = ((long[])[track.ID, track.ID + 1000L]).Where(id => !sentIDs.Contains(id)).ToArray();
                     if (missed.Length > 0)
                         APHandler.APSession.Locations.ScoutLocationsAsync(Archipelago.MultiClient.Net.Enums.HintCreationPolicy.CreateAndAnnounceOnce, missed);

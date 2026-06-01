@@ -78,8 +78,8 @@ public static class APHandler {
 
         if (DeathLinkCounter > 0) {
             if (ArchipelagoPlugin.DeathLinkInboundMode == 0) {
-                ArchipelagoPlugin.Logger.LogInfo("DeathLink is disabled, resetting death counter.");
                 DeathLinkCounter = 0;
+                ArchipelagoPlugin.Logger.LogInfo("DeathLink is disabled, resetting death counter.");
             }
             else if (ArchipelagoPlugin.DeathLinkInboundMode == 1) {
                 DeathLinkCounter = 0;
