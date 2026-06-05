@@ -171,7 +171,7 @@ public class APTrapController {
         CurTrap = null;
     }
 
-    private static TrapType CurTrap;
+    public static TrapType CurTrap { get; private set; }
     private static float TrapStartTime, TrapEndTime;
     public static void ControllerUpdate(GameController controller) {
         if (!controller.musictrack || !controller.musictrack.clip) return; // track ended

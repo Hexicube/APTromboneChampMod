@@ -318,10 +318,55 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                     GUI.color = Color.black;
                     string str = diff.ToString();
                     Vector2 size = textStyle.CalcSize(new GUIContent(str));
-                    GUI.Label(new Rect(x + 20 - size.x/2, height - 28 - size.y/2, 40, 40), diff.ToString(), textStyle);
+                    GUI.Label(new Rect(x + 20 - size.x/2, height - 28 - size.y/2, 40, 40), str, textStyle);
                     GUI.color = Color.white;
                     x += 50;
                 }
+            }
+
+            if (DeathLinkInboundMode != 0 && APHandler.DeathLinkCounter > 0) {
+                x += 20;
+                GUI.DrawTexture(new Rect(x, height - 50, 40, 40), ImageHandler.DeathLinkIndicator);
+                GUI.color = Color.black;
+                string str = APHandler.DeathLinkCounter.ToString();
+                Vector2 size = textStyle.CalcSize(new GUIContent(str));
+                GUI.Label(new Rect(x + 20 - size.x/2, height - 30 - size.y/2, 40, 40), str, textStyle);
+                GUI.color = Color.white;
+                x += 50;
+            }
+
+            APTrapController.TrapType[] traps = [APTrapController.CurTrap, ..APTrapController.TrapQueue];
+            x += 20;
+            foreach (APTrapController.TrapType t in traps) {
+                if (t == null) continue;
+                Texture2D tex;
+                switch (t) {
+                    case APTrapController.TrapType.TrapFlipControls:
+                        tex = ImageHandler.TrapFlipControlsIndicator;
+                        break;
+                    case APTrapController.TrapType.TrapHideNotes:
+                        tex = ImageHandler.TrapHideNotesIndicator;
+                        break;
+                    case APTrapController.TrapType.TrapNoBreath:
+                        tex = ImageHandler.TrapNoBreathIndicator;
+                        break;
+                    case APTrapController.TrapType.TrapSilenceTrack:
+                        tex = ImageHandler.TrapSilenceTrackIndicator;
+                        break;
+                    case APTrapController.TrapType.TrapSilenceTrombone:
+                        tex = ImageHandler.TrapSilenceTromboneIndicator;
+                        break;
+                    case APTrapController.TrapType.TrapWarbleTrombone:
+                        tex = ImageHandler.TrapWarbleTromboneIndicator;
+                        break;
+                    case APTrapController.TrapType.TrapWarpSpeed:
+                        tex = ImageHandler.TrapWarpSpeedIndicator;
+                        break;
+                    default:
+                        continue;
+                }
+                GUI.DrawTexture(new Rect(x, height - 50, 40, 40), tex);
+                x += 50;
             }
         }
     }

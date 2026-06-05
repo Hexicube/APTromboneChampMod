@@ -31,6 +31,20 @@ public static class ImageHandler
 
     public static Texture2D DifficultyIndicator;
     public static Texture2D DifficultyIndicatorGrey;
+    
+    // trap indicators
+
+    public static Texture2D TrapFlipControlsIndicator;
+    public static Texture2D TrapSilenceTrackIndicator;
+    public static Texture2D TrapSilenceTromboneIndicator;
+    public static Texture2D TrapHideNotesIndicator;
+    public static Texture2D TrapNoBreathIndicator;
+    public static Texture2D TrapWarbleTromboneIndicator;
+    public static Texture2D TrapWarpSpeedIndicator;
+    
+    // death link indicator
+
+    public static Texture2D DeathLinkIndicator;
 
     public static bool TexturesLoaded = false;
     public static void LoadTextures() {
@@ -42,6 +56,16 @@ public static class ImageHandler
         FromFile("hotdog_grey");
         FromFile("rank");
         FromFile("rank_grey");
+        
+        FromFile("trap_flip");
+        FromFile("trap_silencetrack");
+        FromFile("trap_silencetrombone");
+        FromFile("trap_hide");
+        FromFile("trap_breath");
+        FromFile("trap_warble");
+        FromFile("trap_warp");
+        
+        FromFile("deathlink");
         
         FromFileSprite("coll_ap");
         FromFileSprite("coll_ap_filter");
@@ -89,6 +113,30 @@ public static class ImageHandler
             case "rank_grey":
                 RankIndicatorGrey = texture;
                 break;
+            case "trap_flip":
+                TrapFlipControlsIndicator = texture;
+                break;
+            case "trap_silencetrack":
+                TrapSilenceTrackIndicator = texture;
+                break;
+            case "trap_silencetrombone":
+                TrapSilenceTromboneIndicator = texture;
+                break;
+            case "trap_hide":
+                TrapHideNotesIndicator = texture;
+                break;
+            case "trap_breath":
+                TrapNoBreathIndicator = texture;
+                break;
+            case "trap_warble":
+                TrapWarbleTromboneIndicator = texture;
+                break;
+            case "trap_warp":
+                TrapWarpSpeedIndicator = texture;
+                break;
+            case "deathlink":
+                DeathLinkIndicator = texture;
+                break;
             default:
                 ArchipelagoPlugin.Logger.LogWarning($"Texture loaded but unknown name: {name}");
                 break;
@@ -98,7 +146,12 @@ public static class ImageHandler
             DifficultyIndicator && DifficultyIndicatorGrey &&
             HotDog && HotDogGrey &&
             RankIndicator && RankIndicatorGrey &&
-            ArchipelagoCollection && ArchipelagoCollectionFiltered && ArchipelagoCollectionLocked
+            ArchipelagoCollection && ArchipelagoCollectionFiltered &&
+            ArchipelagoCollectionLocked && TrapFlipControlsIndicator &&
+            TrapSilenceTrackIndicator && TrapSilenceTromboneIndicator &&
+            TrapHideNotesIndicator && TrapNoBreathIndicator &&
+            TrapWarbleTromboneIndicator && TrapWarpSpeedIndicator &&
+            DeathLinkIndicator
         ) TexturesLoaded = true;
     }
 
