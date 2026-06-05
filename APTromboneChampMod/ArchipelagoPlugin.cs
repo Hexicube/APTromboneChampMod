@@ -430,15 +430,15 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         GUILayout.Label("Receive DeathLink from other players");
         if (GUILayout.Button(DeathLinkButtonText[DeathLinkInboundMode])) {
             DeathLinkInboundMode = (DeathLinkInboundMode + 1) % 3;
-            if (ShouldEnableDeathlink) APHandler.DeathLink.DisableDeathLink();
-            else APHandler.DeathLink.EnableDeathLink();
+            if (ShouldEnableDeathlink) APHandler.DeathLink.EnableDeathLink();
+            else APHandler.DeathLink.DisableDeathLink();
         }
 
         bool oldValue = DeathLinkOutbound;
         DeathLinkOutbound = GUILayout.Toggle(DeathLinkOutbound, "Send DeathLink on failing to beat tracks");
         if (oldValue != DeathLinkOutbound) {
-            if (ShouldEnableDeathlink) APHandler.DeathLink.DisableDeathLink();
-            else APHandler.DeathLink.EnableDeathLink();
+            if (ShouldEnableDeathlink) APHandler.DeathLink.EnableDeathLink();
+            else APHandler.DeathLink.DisableDeathLink();
         }
         
         GUILayout.Space(10);
