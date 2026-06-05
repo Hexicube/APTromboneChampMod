@@ -225,6 +225,22 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     [HarmonyPatch(typeof(GameController), nameof(GameController.Update))]
     class TrapPatch {
         static void Postfix(GameController __instance) {
+            if (DeathLinkInboundMode == 3 && APHandler.DeathLinkCounter > 0 && __instance.musictrack_status != GameController.track_status.ended) {
+                APHandler.DeathLinkCounter = 0;
+                float trackTime = (float)__instance.musictrack.timeSamples / (float)__instance.musictrack.clip.frequency;
+                // not already restarting and track has not just started
+                if (!__instance.retrying && trackTime > 5f) {
+                    Logger.LogInfo("DeathLink triggered, restarting track.");
+                    __instance.sfxrefs.recordscratch.Play();
+                    __instance.musictrack.Pause();
+                    __instance.curtainc.closeCurtain(true);
+                    __instance.paused = true;
+                    __instance.retrying = true;
+                    __instance.quitting = true;
+                }
+                else Logger.LogInfo("DeathLink triggered, ignoring as too early or already restarting.");
+            }
+            
             APTrapController.ControllerUpdate(__instance);
         }
     }
@@ -324,7 +340,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 }
             }
 
-            if (DeathLinkInboundMode != 0 && APHandler.DeathLinkCounter > 0) {
+            if (DeathLinkInboundMode != 0 && DeathLinkInboundMode != 3 && APHandler.DeathLinkCounter > 0) {
                 x += 20;
                 GUI.DrawTexture(new Rect(x, height - 50, 40, 40), ImageHandler.DeathLinkIndicator);
                 GUI.color = Color.black;
@@ -411,7 +427,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     public static bool SendChatToLog = true;
     public static bool HintLocsOnMissed = false;
     public static int DeathLinkInboundMode = 0;
-    private static string[] DeathLinkButtonText = { "Disabled", "Enabled", "Cumulative" };
+    private static string[] DeathLinkButtonText = { "Disabled", "Enabled", "Cumulative", "Immediate" };
     public static bool DeathLinkOutbound = false;
 
     public static bool ShouldEnableDeathlink => DeathLinkInboundMode != 0 || DeathLinkOutbound;
@@ -429,7 +445,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
 
         GUILayout.Label("Receive DeathLink from other players");
         if (GUILayout.Button(DeathLinkButtonText[DeathLinkInboundMode])) {
-            DeathLinkInboundMode = (DeathLinkInboundMode + 1) % 3;
+            DeathLinkInboundMode = (DeathLinkInboundMode + 1) % 4;
             if (ShouldEnableDeathlink) APHandler.DeathLink.EnableDeathLink();
             else APHandler.DeathLink.DisableDeathLink();
         }

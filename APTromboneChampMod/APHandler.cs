@@ -86,10 +86,14 @@ public static class APHandler {
                 ArchipelagoPlugin.Logger.LogInfo($"DeathLink blocked score entry, counter reset.");
                 return [];
             }
-            else {
+            else if (ArchipelagoPlugin.DeathLinkInboundMode == 2) {
                 DeathLinkCounter--;
                 ArchipelagoPlugin.Logger.LogInfo($"DeathLink blocked score entry, counter is now {DeathLinkCounter}.");
                 return [];
+            }
+            else {
+                DeathLinkCounter = 0;
+                ArchipelagoPlugin.Logger.LogInfo("DeathLink mode is immediate, resetting death counter.");
             }
         }
 
