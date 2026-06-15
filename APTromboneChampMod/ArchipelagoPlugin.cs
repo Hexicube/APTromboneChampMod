@@ -66,8 +66,8 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 else achievedRating = 3; // S
             }
             bool beaten = achievedRating >= APHandler.GetRequiredRating();
-            Track track = APHandler.AvailableTracks.FirstOrDefault(track => track.Name == GlobalVariables.chosen_track_data.trackname_short);
-            if (track.Name == GlobalVariables.chosen_track_data.trackname_short) { // make sure it exists
+            Track track = APHandler.AvailableTracks.FirstOrDefault(track => track.Name.ToLower() == GlobalVariables.chosen_track_data.trackname_short.ToLower());
+            if (track.Name.ToLower() == GlobalVariables.chosen_track_data.trackname_short.ToLower()) { // make sure it exists
                 Logger.LogInfo($"Track end screen: {GlobalVariables.chosen_track_data.trackname_short}");
                 Logger.LogInfo($" Score: {scorePct:P2}");
                 Logger.LogInfo($"Rating: {new []{"F", "D", "C", "B", "A", "S", "Wall (S)", "Perfect (S)"}[achievedRating+2]}");
