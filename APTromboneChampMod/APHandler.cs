@@ -31,8 +31,8 @@ public static class APHandler {
     public static Hint[] APReceivedHints = [];
 
     public static Track? FindTrack(string name) {
-        Track track = FilteredTracks.FirstOrDefault(track => track.Name == name);
-        if (track.Name != name) return null;
+        Track track = FilteredTracks.FirstOrDefault(track => track.Name.ToLower() == name.ToLower());
+        if (track.Name.ToLower() != name.ToLower()) return null;
         return track;
     }
     
