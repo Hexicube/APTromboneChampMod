@@ -310,7 +310,7 @@ public static class APHandler {
             return false;
         }
         
-        return BeatenTracks.Length >= WorldSettings.GoalTracks;
+        return BeatenTracks.Distinct().Count() >= WorldSettings.GoalTracks;
     }
 
     public static long ConnectTime;
@@ -512,12 +512,12 @@ public static class APHandler {
             APSession.DataStorage[$"_{APTeam}_{APSlot}_beaten"].Initialize(new long[] {});
             APSession.DataStorage[$"_{APTeam}_{APSlot}_beaten"].OnValueChanged += (oldData, newData, args) => {
                 long[] oldBeaten = BeatenTracks;
-                BeatenTracks = [..newData.Select(v => v.ToObject<long>())];
+                BeatenTracks = [..newData.Select(v => v.ToObject<long>()).Distinct()];
 
                 if (HasGoaled()) APSession.SetGoalAchieved();
                 if (oldBeaten.Length != BeatenTracks.Length || oldBeaten.Any(v => !BeatenTracks.Contains(v))) OnTrackAvailabilityChanged();
             };
-            BeatenTracks = APSession.DataStorage[$"_{APTeam}_{APSlot}_beaten"].To<long[]>();
+            BeatenTracks = APSession.DataStorage[$"_{APTeam}_{APSlot}_beaten"].To<long[]>().Distinct().ToArray();
             
             WorldSettings.GoalTracks = int.Parse(success.SlotData["goal"].ToString());
             WorldSettings.GoalTrack = success.SlotData["goal_track"].ToString();

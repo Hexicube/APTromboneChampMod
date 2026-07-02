@@ -465,7 +465,7 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         if (APHandler.HasGoaled()) goal = "Goaled!";
         else if (APHandler.WorldSettings.GoalTracks == 0) goal = $"Goal track: {APHandler.WorldSettings.GoalTrack}";
         else {
-            int numBeaten = tracks.Count(track => APHandler.BeatenTracks.Contains(track.ID));
+            int numBeaten = APHandler.BeatenTracks.Distinct().Count();
             goal = $"Beat tracks: {numBeaten}/{APHandler.WorldSettings.GoalTracks}";
         }
         GUILayout.Label(goal);
