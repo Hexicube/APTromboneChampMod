@@ -442,22 +442,23 @@ public static class APHandler {
 
                         if (!found && !existing) {
                             // add the hint if item was not found and the item is new
-                            APReceivedHints = [
-                                ..APReceivedHints,
-                                new Hint {
-                                    Entrance        = "",
-                                    FindingPlayer   = sender,
-                                    Found           = false,
-                                    ItemFlags       = hintMsg.Item.Flags,
-                                    ItemId          = item,
-                                    LocationId      = location,
-                                    ReceivingPlayer = receiver,
-                                    Status          = (hintMsg.Item.Flags & ItemFlags.Trap) != 0 ? HintStatus.Avoid : (hintMsg.Item.Flags == 0 ? HintStatus.NoPriority : HintStatus.Priority)
-                                }
-                            ];
+                            Hint hint = new Hint {
+                                Entrance        = "",
+                                FindingPlayer   = sender,
+                                Found           = false,
+                                ItemFlags       = hintMsg.Item.Flags,
+                                ItemId          = item,
+                                LocationId      = location,
+                                ReceivingPlayer = receiver,
+                                Status          = (hintMsg.Item.Flags & ItemFlags.Trap) != 0 ? HintStatus.Avoid : (hintMsg.Item.Flags == 0 ? HintStatus.NoPriority : HintStatus.Priority)
+                            };
+                            APReceivedHints = [..APReceivedHints, hint];
+                            ArchipelagoPlugin.AddDisplayMessage(FormatFullHint(hint), UnityEngine.Color.cyan);
                             OnHintsChanged();
                         }
-                        if (!found && ArchipelagoPlugin.SendChatToLog) ArchipelagoPlugin.Logger.LogInfo(message.ToString());
+                        if (!found) {
+                            if (ArchipelagoPlugin.SendChatToLog) ArchipelagoPlugin.Logger.LogInfo(message.ToString());
+                        }
                     }
                     return; // for some reason this message type is also ItemSendLogMessage???
                 }
@@ -481,6 +482,20 @@ public static class APHandler {
                             }
                         }
                         if (ArchipelagoPlugin.SendChatToLog) ArchipelagoPlugin.Logger.LogInfo(message.ToString());
+
+                        PlayerInfo senderInfo = APSession.Players.GetPlayerInfo(sender);
+                        string locName = APSession.Locations.GetLocationNameFromId(location, senderInfo.Game);
+                        
+                        PlayerInfo player = APSession.Players.GetPlayerInfo(receiver);
+                        string itemName = APSession.Items.GetItemName(itemMsg.Item.ItemId, player.Game);
+                        
+                        string text;
+                        if (sender == APSlot) {
+                            if (receiver == APSlot) text = $"You found your {itemName} ({locName})";
+                            else text = $"You found {player.Alias}'s {itemName} ({locName})";
+                        }
+                        else text = $"{senderInfo.Alias} found your {itemName} ({locName})";
+                        ArchipelagoPlugin.AddDisplayMessage(text, UnityEngine.Color.white);
                     }
                     return;
                 }
@@ -494,12 +509,13 @@ public static class APHandler {
                 APVersion, [], null, pass, true
             );
             ConnectTime = LastFunFact = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-            if (!result.Successful)
-            {
-                // TODO: show errors
+            if (!result.Successful) {
                 ArchipelagoPlugin.Logger.LogWarning($"Failed to connect to {host}:{port}");
                 LoginFailure failure = (LoginFailure)result;
-                foreach (string error in failure.Errors) ArchipelagoPlugin.Logger.LogWarning($"    {error}");
+                foreach (string error in failure.Errors) {
+                    ArchipelagoPlugin.Logger.LogWarning($"    {error}");
+                    ArchipelagoPlugin.AddDisplayMessage(error, UnityEngine.Color.red);
+                }
                 foreach (ConnectionRefusedError error in failure.ErrorCodes) ArchipelagoPlugin.Logger.LogWarning($"    {error}");
                 return;
             }
@@ -563,6 +579,7 @@ public static class APHandler {
                 if (ArchipelagoPlugin.DeathLinkInboundMode != 0) {
                     DeathLinkCounter++;
                     ArchipelagoPlugin.Logger.LogInfo($"DeathLink counter incremented to {DeathLinkCounter}.");
+                    ArchipelagoPlugin.AddDisplayMessage(deathLinkObj.Cause ?? $"{deathLinkObj.Source} died!", UnityEngine.Color.magenta);
                 }
                 else ArchipelagoPlugin.Logger.LogInfo("Ignoring death, DeathLink is disabled.");
             };
@@ -570,6 +587,7 @@ public static class APHandler {
         catch (Exception e) {
             ArchipelagoPlugin.Logger.LogError($"Unusual error: {e.Message}");
             ArchipelagoPlugin.Logger.LogError(e.StackTrace);
+            ArchipelagoPlugin.AddDisplayMessage(e.Message, UnityEngine.Color.red);
         }
     }
 

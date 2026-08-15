@@ -11,6 +11,7 @@ using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.UI;
 using Color = UnityEngine.Color;
 
 namespace APTromboneChampMod;
@@ -46,6 +47,11 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         TrackCollectionRegistrationEvent.EVENT.Register(new TrackCollectionListener());
         
         _harmony.PatchAll();
+
+        BrandingController bc = FindObjectOfType<BrandingController>();
+        messageTextStyle.font = bc.failed_to_load_error.transform.Find("full_text").GetComponent<Text>().font; // from BaboonAPI
+
+        background.SetPixel(0, 0, new Color(0f, 0f, 0f));
     }
 
     [HarmonyPatch(typeof(PointSceneController), nameof(PointSceneController.Awake))]
@@ -245,6 +251,11 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
         }
     }
 
+    private static (string, Color)[] curMessages = [("", Color.white), ("", Color.white), ("", Color.white), ("", Color.white), ("", Color.white)];
+    public static void AddDisplayMessage(string msg, Color col) {
+        (curMessages[0], curMessages[1], curMessages[2], curMessages[3], curMessages[4]) = ((msg, col), curMessages[0], curMessages[1], curMessages[2], curMessages[3]);
+    }
+
     void Update() {
         if (Input.GetKeyDown(KeyCode.F1)) {
             if (curGUI is -1 or > 1) {
@@ -264,13 +275,40 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
     }
 
     private static GUIStyle textStyle = new GUIStyle() { fontSize = 17 };
+    private static GUIStyle messageTextStyle = new GUIStyle() { fontSize = 17 };
+    private static Texture2D background = new Texture2D(1, 1);
+    private static bool hasNotifiedGoal = false, hasNotifiedCanGoal = false;
     void OnGUI() {
+        int width  = Screen.width;
+        int height = Screen.height;
+
+        if (!curMessages[0].Item1.IsNullOrWhiteSpace()) {
+            float widest = 0f;
+            int c = 0;
+            for (int a = 0; a < curMessages.Length; a++) {
+                if (curMessages[a].Item1.IsNullOrWhiteSpace()) break;
+                float textWidth = messageTextStyle.CalcSize(new GUIContent(curMessages[a].Item1)).x;
+                if (textWidth > widest) widest = textWidth;
+                c++;
+            }
+
+            GUI.color = Color.black;
+            GUI.DrawTexture(new Rect(width - widest - 15, height - c * 20 - 15, widest + 15, c * 20 + 15), background);
+            GUI.color = Color.white;
+
+            for (int a = 0; a < curMessages.Length; a++) {
+                if (curMessages[a].Item1.IsNullOrWhiteSpace()) break;
+                float textWidth = messageTextStyle.CalcSize(new GUIContent(curMessages[a].Item1)).x;
+                messageTextStyle.normal.textColor = curMessages[a].Item2;
+                GUI.Label(new Rect(width - textWidth - 5, height - 25 - a * 20, textWidth, 30), curMessages[a].Item1, messageTextStyle);
+            }
+        }
+
         if (curGUI != -1) windowRect = GUI.Window(curGUI, windowRect, WindowHandler, "Archipelago Menu");
 
         if (!ImageHandler.TexturesLoaded) return;
         
         // show that the AP mod loaded ok
-        int height = Screen.height;
         GUI.DrawTexture(new Rect(10, height - 50, 40, 40), APHandler.APSlot == -1 ? ImageHandler.ArchipelagoGrey : ImageHandler.Archipelago);
 
         // show some tracker information
@@ -278,8 +316,10 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
             int x = 60;
 
             if (APHandler.HasGoaled()) {
-                // if goaled, indicate that and early exit
-                // TODO
+                if (!hasNotifiedGoal) {
+                    hasNotifiedGoal = true;
+                    AddDisplayMessage("You have goaled!", Color.yellow);
+                }
                 return;
             }
 
@@ -287,8 +327,10 @@ public class ArchipelagoPlugin : BaseUnityPlugin {
                 int rank = ItemHandler.RankReductions;
                 int req  = APHandler.WorldSettings.InitialRating - APHandler.WorldSettings.GoalRating;
                 if (rank >= req) {
-                    // if the goal track is available, indicate that and early exit
-                    // TODO
+                    if (!hasNotifiedCanGoal) {
+                        hasNotifiedCanGoal = true;
+                        AddDisplayMessage("Goal available!", Color.green);
+                    }
                     return;
                 }
             }
