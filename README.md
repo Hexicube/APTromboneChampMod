@@ -18,6 +18,13 @@ What the mod currently does:
   - If difficulty gating is on, shows what difficulties require an item (grey difficulties are locked)
   - If DeathLink is on (and not set to immediate), shows the current death counter if non-zero
   - Shows received traps in the order they will activate, including the currently active trap
+- Bottom-right shows the last 5 relevant messages
+  - Items (white)
+  - Hints (cyan)
+  - Deaths, if DeathLink inbound is enabled (magenta)
+  - Goal available (green)
+  - Goaled (yellow)
+  - Connection errors (red)
 - Connection UI, or basic information and some toggles by pressing F1
 - Currently missing items and hinting UI by pressing F2 (unless not connected, in which case the connection UI opens instead)
 - Three collections that populate based on the AP server
@@ -50,14 +57,10 @@ What it does not currently do:
 - No blocking on turbo/practice mode, these options don't impact rating and can be used to adjust difficulty on the fly
   - Turbo mode is particularly useful if you know beating a track has no useful item, as there's no rating requirement
   - Turbo mode is also useful if you have inbound DeathLink enabled and need to use up received deaths
-- No in-game chat feed, so there's no indication of what items were received or sent as they happen
-  - The collections and F1/F2 UIs do update in real-time
+- No in-game chat feed, so you don't get to see what others are saying
   - Chat messages are sent to the console by default
 
 
 ## TODO
 
-- Add somewhere for chat messages
-  - Add errors to this chat
 - Make it possible to hint directly from the track list rather than needing a UI
-- Notify the player in some way when the goal track becomes available
