@@ -502,6 +502,10 @@ public static class APHandler {
                 
                 if (ArchipelagoPlugin.SendChatToLog) ArchipelagoPlugin.Logger.LogInfo(message.ToString());
             };
+            APSession.Socket.ErrorReceived += (error, message) => {
+                ArchipelagoPlugin.Logger.LogError($"AP socket error: {message}");
+                ArchipelagoPlugin.Logger.LogError(error);
+            };
             ConnectTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
             LoginResult result = APSession.TryConnectAndLogin( // TODO: async version
                 "Trombone Champ", slot,
